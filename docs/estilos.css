@@ -436,3 +436,10 @@ a.btn.link { text-align: center; }
 .ajustes h3 + .nota { margin-top: 0; }
 .ajustes .cantidades, .ajustes .dos { margin-bottom: 14px; }
 .aviso-grande .combo { justify-content: center; }
+
+/* Reloj de votación */
+.reloj-voto { text-align: center; background: #fff; border-radius: 10px; padding: 6px 10px; margin-top: 8px; font-size: .9rem; }
+.reloj-voto b[data-fin] { font-family: var(--fuente-titulo); font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+.reloj-voto.apurate { background: var(--amarillo); }
+.bol .frente small { display: block; font-family: var(--fuente); font-size: .55rem; }
+.bol .frente { flex-direction: column; }

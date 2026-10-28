@@ -282,3 +282,24 @@ test('declaraciones del Jefe y el Vocero después de publicar', () => {
   assert.strictEqual(S.pub.game.phase, 'nominate');
   assert.deepStrictEqual(S.pub.game.history[0].claims, { chief: 2, vocero: 1 });
 });
+
+test('quien no vota a tiempo cuenta como Sí', () => {
+  const rnd = semilla(44);
+  let S = salaCon(5, rnd, { debate: 0, declare: false, voteTime: 20 });
+  const g = S.pub.game;
+  const ok = g.order.filter((p) => E.puedeSerVocero(S, p) && S.sec.roles[p] !== 'topo');
+  S = jugar(S, g.candidate, { type: 'nominate', target: ok[0] }, rnd, 1000);
+  assert.strictEqual(S.pub.game.voteEnd, 21000);
+  const [a, b] = g.order;
+  S = jugar(S, a, { type: 'vote', vote: false }, rnd);
+  S = jugar(S, b, { type: 'vote', vote: false }, rnd);
+  assert.throws(() => E.aplicar(JSON.parse(JSON.stringify(S)), a, { type: 'voteTimeout' }, rnd, 5000), /Todavía/);
+  S = jugar(S, a, { type: 'voteTimeout' }, rnd, 21000);
+  const lv = S.pub.game.lastVote;
+  assert.strictEqual(lv.yes, 3);
+  assert.strictEqual(lv.approved, true);
+  assert.strictEqual(lv.late.length, 3);
+  // Un aviso repetido no rompe nada.
+  S = jugar(S, b, { type: 'voteTimeout' }, rnd, 22000);
+  assert.strictEqual(S.pub.game.phase, 'chiefDiscard');
+});

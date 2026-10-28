@@ -69,7 +69,7 @@ export const REGLAS = `
 <ol>
   <li>El <b>Candidato a Jefe de Campaña</b> (va rotando) elige a un <b>Vocero</b>.</li>
   <li><b>Debate con reloj</b>: habla cada jugador en carrera, por turno. Primero el candidato a Jefe, después el candidato a Vocero y después el resto. Cuando se acaba tu tiempo (o tocás "Terminé"), pasa la palabra. Los eliminados no hablan.</li>
-  <li>Todos votan con boleta: <b>¡Sí!</b> o <b>¡No!</b>. Las boletas se abren todas juntas.</li>
+  <li>Todos votan con boleta: <b>¡Sí!</b> o <b>¡No!</b>. Hay un reloj: <b>si no votás a tiempo, tu boleta cuenta como ¡Sí!</b>. Las boletas se abren todas juntas.</li>
   <li>Si gana el Sí (más de la mitad), el Jefe agarra 3 cartas de la <b>Mesa de Entradas</b>, manda 1 a <b>La Trituradora</b> y le pasa 2 al Vocero. El Vocero tritura 1 y <b>publica la otra</b>. La Crisis vuelve a cero.</li>
   <li><b>Declaraciones</b>: el Jefe dice qué 3 cartas le llegaron y el Vocero, qué 2 recibió. Queda en el historial. ¿Dicen la verdad? Eso lo decide la mesa.</li>
   <li>Si empata o gana el No, el cargo pasa al siguiente y sube la <b>Crisis</b>. Con 3 rechazos seguidos hay <b>¡Cacerolazo!</b>: se publica la carta de arriba sin poderes.</li>

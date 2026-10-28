@@ -166,6 +166,9 @@ function pantallaPractica() {
       <p class="nota">Vos + bots que votan, mienten y se hacen los distraídos.</p>
       <h3>🎙️ Segundos de debate por persona</h3>
       <div class="cantidades">${[0, 15, 30, 45, 60, 90].map((t) => `<button class="btn cant deb ${t === 30 ? 'elegida' : ''}" data-act="cantidadDeb" data-t="${t}">${t || 'Sin'}</button>`).join('')}</div>
+      <h3>⏱️ Segundos para votar</h3>
+      <div class="cantidades">${[0, 20, 30, 45, 60, 90].map((t) => `<button class="btn cant vot ${t === 30 ? 'elegida' : ''}" data-act="cantidadVot" data-t="${t}">${t || 'Sin'}</button>`).join('')}</div>
+      <p class="nota">Si no votás a tiempo, tu boleta cuenta como ¡Sí!</p>
     </div>
     <button class="btn grande primario" data-act="practicar">¡Largar la campaña!</button>
     <button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button>
@@ -273,7 +276,7 @@ function pantallaEspera() {
 }
 
 function panelAjustes(p, soyHost) {
-  const c = Object.assign({ debate: 30, declare: true }, p.settings || {});
+  const c = Object.assign({ debate: 30, declare: true, voteTime: 30 }, p.settings || {});
   const tiempos = [0, 15, 30, 45, 60, 90];
   const txt = (t) => (t ? t + ' s' : 'Sin');
   return `<div class="tarjeta ajustes">
@@ -282,6 +285,11 @@ function panelAjustes(p, soyHost) {
     ${soyHost
       ? `<div class="cantidades">${tiempos.map((t) => `<button class="btn cant ${c.debate === t ? 'elegida' : ''}" data-act="ajuste" data-debate="${t}">${txt(t)}</button>`).join('')}</div>`
       : `<p><b>${c.debate ? c.debate + ' segundos por persona' : 'Sin debate'}</b></p>`}
+    <h3>⏱️ Tiempo para votar</h3>
+    <p class="nota izq">Quien no vota antes de que se termine el reloj, cuenta como <b>¡Sí!</b>.</p>
+    ${soyHost
+      ? `<div class="cantidades">${[0, 20, 30, 45, 60, 90].map((t) => `<button class="btn cant ${c.voteTime === t ? 'elegida' : ''}" data-act="ajuste" data-vote="${t}">${t ? t + ' s' : 'Sin'}</button>`).join('')}</div>`
+      : `<p><b>${c.voteTime ? c.voteTime + ' segundos' : 'Sin límite'}</b></p>`}
     <h3>🗣️ Declaraciones</h3>
     <p class="nota izq">Después de publicar, el Jefe y el Vocero cuentan qué cartas les llegaron. Pueden mentir.</p>
     ${soyHost
@@ -389,6 +397,7 @@ function panelAccion(g) {
           <button class="boleta si ${st.miVoto === true && ya ? 'elegida' : ''}" data-act="votar" data-v="1">${A.boleta(true)}</button>
           <button class="boleta no ${st.miVoto === false && ya ? 'elegida' : ''}" data-act="votar" data-v="0">${A.boleta(false)}</button>
         </div>
+        ${g.voteEnd ? `<div class="reloj-voto ${ya ? '' : 'apurate'}">⏱️ <b data-fin="${g.voteEnd}">${relojTexto(g.voteEnd)}</b> s ${ya ? 'para que cierre la urna' : '· si no votás, tu boleta cuenta como <b>¡Sí!</b>'}</div>` : ''}
         <p class="nota">${ya ? `Tu boleta está en la urna (podés cambiarla). ` : ''}Faltan ${faltan} boleta${faltan === 1 ? '' : 's'}.</p>`;
     }
     case 'chiefDiscard': {
@@ -613,7 +622,7 @@ function animarUrna(lv) {
     <div class="boletas-abiertas">
       ${Object.keys(votos).map((pid, i) => `<div class="bol ${votos[pid] ? 'si' : 'no'}" style="--i:${i}">
         <div class="dorso">${A.sobre()}</div>
-        <div class="frente">${votos[pid] ? '¡Sí!' : '¡No!'}</div>
+        <div class="frente">${votos[pid] ? '¡Sí!' : '¡No!'}${lista(lv.late).includes(pid) ? '<small>no votó</small>' : ''}</div>
         <span>${esc(nombre(pid))}</span>
       </div>`).join('')}
     </div>
@@ -731,7 +740,7 @@ function modalHistorial(g) {
       <div class="r-cab"><b>Ronda ${r.round}</b> ${estado} ${pub} ${extra}</div>
       <div>🪪 Jefe: <b>${esc(nombre(r.candidate))}</b> · 🎤 Vocero: <b>${esc(nombre(r.nominee))}</b></div>
       ${r.claims && (r.claims.chief !== undefined || r.claims.vocero !== undefined) ? `<div class="dichos">🗣️ Jefe dijo: ${r.claims.chief !== undefined ? A.combo(r.claims.chief, 3) : '—'} · Vocero dijo: ${r.claims.vocero !== undefined ? A.combo(r.claims.vocero, 2) : '—'}</div>` : ''}
-      ${Object.keys(votos).length ? `<div class="votos">${Object.keys(votos).map((p) => `<span class="${votos[p] ? 'si' : 'no'}">${esc(nombre(p))} ${votos[p] ? 'Sí' : 'No'}</span>`).join('')}</div>` : ''}
+      ${Object.keys(votos).length ? `<div class="votos">${Object.keys(votos).map((p) => `<span class="${votos[p] ? 'si' : 'no'}">${esc(nombre(p))} ${votos[p] ? 'Sí' : 'No'}${lista(r.late).includes(p) ? ' (no votó)' : ''}</span>`).join('')}</div>` : ''}
     </div>`;
   }).join('')}</div>`;
 }
@@ -775,7 +784,10 @@ document.addEventListener('click', async (ev) => {
 
   switch (act) {
     case 'cantidad':
-      document.querySelectorAll('.cant:not(.deb)').forEach((x) => x.classList.toggle('elegida', x === b));
+      document.querySelectorAll('.cant:not(.deb):not(.vot)').forEach((x) => x.classList.toggle('elegida', x === b));
+      break;
+    case 'cantidadVot':
+      document.querySelectorAll('.cant.vot').forEach((x) => x.classList.toggle('elegida', x === b));
       break;
     case 'cantidadDeb':
       document.querySelectorAll('.cant.deb').forEach((x) => x.classList.toggle('elegida', x === b));
@@ -783,15 +795,16 @@ document.addEventListener('click', async (ev) => {
     case 'practicar': {
       const name = apodo();
       if (!name) return;
-      const n = Number((document.querySelector('.cant.elegida:not(.deb)') || {}).dataset?.n || 7);
+      const n = Number((document.querySelector('.cant.elegida:not(.deb):not(.vot)') || {}).dataset?.n || 7);
       const debate = Number((document.querySelector('.cant.deb.elegida') || {}).dataset?.t ?? 30);
+      const voteTime = Number((document.querySelector('.cant.vot.elegida') || {}).dataset?.t ?? 30);
       Object.assign(st, { code: 'BOTS', pid: 'p1' });
       Practica.iniciar(name, n, (e) => {
         st.pub = e.pub;
         st.priv = e.priv;
         st.presence = e.presence;
         dibujar();
-      }, { debate, declare: true });
+      }, { debate, declare: true, voteTime });
       break;
     }
     case 'crear': {
@@ -862,7 +875,10 @@ document.addEventListener('click', async (ev) => {
     case 'cortarDebate': jugar({ type: 'debateNext', all: true }); break;
     case 'declarar': jugar({ type: 'declare', proposals: Number(d.n) }); break;
     case 'ajuste':
-      jugar(Object.assign({ type: 'settings' }, d.debate !== undefined ? { debate: Number(d.debate) } : { declare: d.declare === '1' }));
+      jugar(Object.assign({ type: 'settings' },
+        d.debate !== undefined ? { debate: Number(d.debate) }
+          : d.vote !== undefined ? { voteTime: Number(d.vote) }
+            : { declare: d.declare === '1' }));
       break;
     case 'revancha': jugar({ type: 'rematch' }); break;
     case 'reglas':
@@ -897,6 +913,15 @@ setInterval(() => {
     el.style.strokeDashoffset = String(119.4 * (1 - resto));
   });
   const g = st.pub && st.pub.game;
+  if (g && g.phase === 'vote' && g.voteEnd && ahoraServidor() >= g.voteEnd) {
+    // Avisa el anfitrión (o cualquiera, si el anfitrión no está conectado).
+    const clave = 'v' + g.round;
+    const reintento = !st.pasado || st.pasado.clave !== clave || Date.now() - st.pasado.t > 2500;
+    if ((st.pub.host === st.pid || !st.presence[st.pub.host]) && reintento) {
+      st.pasado = { clave, t: Date.now() };
+      jugar({ type: 'voteTimeout' }, true);
+    }
+  }
   if (!g || g.phase !== 'debate' || !g.debate) return;
   const d = g.debate;
   const habla = lista(d.order)[d.idx];

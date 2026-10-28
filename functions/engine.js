@@ -34,7 +34,11 @@ const CRISIS_MAX = 3;
 // Debate: segundos que tiene cada jugador para hablar antes de votar.
 const DEBATE_OPCIONES = [0, 15, 30, 45, 60, 90];
 const DEBATE_POR_DEFECTO = 30;
-const TOLERANCIA_MS = 1500; // por diferencias de reloj entre celulares
+const TOLERANCIA_MS = 1500;
+
+// Votación: segundos para votar; quien no vota a tiempo cuenta como ¡Sí!.
+const VOTO_OPCIONES = [0, 20, 30, 45, 60, 90];
+const VOTO_POR_DEFECTO = 30; // por diferencias de reloj entre celulares
 
 // Cantidad de operadores (sin contar al Topo) según jugadores.
 const OPERADORES_POR_CANTIDAD = { 5: 1, 6: 1, 7: 2, 8: 2, 9: 3, 10: 3 };
@@ -103,7 +107,7 @@ function crearSala(code, uid, name, ahora) {
       nextPid: 2,
       createdAt: ahora,
       players: { p1: { name, joinedAt: ahora } },
-      settings: { debate: DEBATE_POR_DEFECTO, declare: true },
+      settings: { debate: DEBATE_POR_DEFECTO, declare: true, voteTime: VOTO_POR_DEFECTO },
     },
     priv: { p1: { pin: null } },
   };
@@ -173,6 +177,10 @@ function ajustes(S, pid, a) {
     actual.debate = a.debate;
   }
   if (a.declare !== undefined) actual.declare = !!a.declare;
+  if (a.voteTime !== undefined) {
+    exigir(VOTO_OPCIONES.includes(a.voteTime), 'Tiempo de votación inválido.');
+    actual.voteTime = a.voteTime;
+  }
   S.pub.settings = actual;
 }
 
@@ -181,6 +189,7 @@ function config(S) {
   return {
     debate: DEBATE_OPCIONES.includes(c.debate) ? c.debate : DEBATE_POR_DEFECTO,
     declare: c.declare !== false,
+    voteTime: VOTO_OPCIONES.includes(c.voteTime) ? c.voteTime : VOTO_POR_DEFECTO,
   };
 }
 
@@ -304,6 +313,7 @@ function siguienteRonda(S) {
   g.power = '';
   g.pendingPower = '';
   g.debate = null;
+  g.voteEnd = 0;
   g.vetoDenied = false;
   g.phase = 'nominate';
   g.round += 1;
@@ -402,7 +412,7 @@ function nominar(S, pid, objetivo, ahora) {
   const segs = config(S).debate;
   if (!segs) {
     log(S, nombre(S, pid) + ' propone a ' + nombre(S, objetivo) + ' como Vocero. ¡A votar!');
-    abrirVotacion(S);
+    abrirVotacion(S, ahora);
     return;
   }
   // Hablan primero los de la fórmula y después el resto, en orden de mesa.
@@ -418,8 +428,10 @@ function nominar(S, pid, objetivo, ahora) {
   log(S, nombre(S, pid) + ' propone a ' + nombre(S, objetivo) + ' como Vocero. ¡Arranca el debate!');
 }
 
-function abrirVotacion(S) {
+function abrirVotacion(S, ahora) {
   const g = S.pub.game;
+  const segs = config(S).voteTime;
+  g.voteEnd = segs ? ahora + segs * 1000 : 0;
   g.debate = null;
   g.phase = 'vote';
   g.voted = {};
@@ -436,7 +448,7 @@ function pasarPalabra(S, pid, a, ahora) {
   if (a.all) {
     exigir(S.pub.host === pid && g.alive[pid], 'Solo el anfitrión en carrera puede cortar el debate.');
     log(S, 'El anfitrión cortó el debate. ¡A votar!');
-    abrirVotacion(S);
+    abrirVotacion(S, ahora);
     return;
   }
   if (a.idx !== undefined && a.idx !== d.idx) return; // ya lo pasó otro
@@ -447,7 +459,7 @@ function pasarPalabra(S, pid, a, ahora) {
   d.idx += 1;
   if (d.idx >= orden.length) {
     log(S, 'Terminó el debate. ¡A votar!');
-    abrirVotacion(S);
+    abrirVotacion(S, ahora);
     return;
   }
   d.turnEnd = ahora + d.secs * 1000;
@@ -462,9 +474,28 @@ function votar(S, pid, voto, rnd) {
   g.voted = objeto(g.voted);
   S.sec.votes[pid] = voto;
   g.voted[pid] = true;
+  if (vivos(S).every((p) => S.sec.votes[p] !== undefined)) contarVotos(S, rnd);
+}
 
+// Se terminó el tiempo: los que no votaron cuentan como ¡Sí!.
+function votoVencido(S, rnd, ahora) {
+  const g = S.pub.game;
+  if (g.phase !== 'vote') return; // ya se cerró (otro celular avisó primero)
+  exigir(g.voteEnd && ahora >= g.voteEnd - TOLERANCIA_MS, 'Todavía hay tiempo para votar.');
+  S.sec.votes = objeto(S.sec.votes);
+  const tarde = vivos(S).filter((p) => S.sec.votes[p] === undefined);
+  for (const p of tarde) S.sec.votes[p] = true;
+  if (tarde.length) {
+    rondaActual(S).late = tarde;
+    log(S, 'Se terminó el tiempo: ' + tarde.map((p) => nombre(S, p)).join(', ') + ' no ' +
+      (tarde.length === 1 ? 'votó' : 'votaron') + ' a tiempo y cuenta como ¡Sí!.');
+  }
+  contarVotos(S, rnd);
+}
+
+function contarVotos(S, rnd) {
+  const g = S.pub.game;
   const electores = vivos(S);
-  if (!electores.every((p) => S.sec.votes[p] !== undefined)) return;
 
   // Se abren todas las boletas juntas.
   const votos = {};
@@ -475,6 +506,8 @@ function votar(S, pid, voto, rnd) {
   }
   const aprobado = si > electores.length / 2;
   g.lastVote = { round: g.round, votes: votos, yes: si, no: electores.length - si, approved: aprobado };
+  const tarde = lista(rondaActual(S).late);
+  if (tarde.length) g.lastVote.late = tarde;
   const r = rondaActual(S);
   r.votes = votos;
   r.approved = aprobado;
@@ -713,6 +746,7 @@ function aplicar(S, pid, a, rnd, ahora) {
     case 'debateNext': return pasarPalabra(S, pid, a, ahora);
     case 'declare': return declarar(S, pid, a.proposals);
     case 'vote': return votar(S, pid, a.vote, rnd);
+    case 'voteTimeout': return votoVencido(S, rnd, ahora);
     case 'chiefDiscard': return descartarJefe(S, pid, a.index);
     case 'voceroDiscard': return descartarVocero(S, pid, a.index, rnd);
     case 'vetoRequest': return pedirVeto(S, pid);
@@ -725,7 +759,7 @@ function aplicar(S, pid, a, rnd, ahora) {
 const API = {
   ROLES, BANDOS, CARTAS, PODERES, OPERADORES_POR_CANTIDAD,
   ErrorJuego, crearSala, unirse, limpiarNombre, aplicar, puedeSerVocero, tableroEscandalos, lista,
-  config, DEBATE_OPCIONES,
+  config, DEBATE_OPCIONES, VOTO_OPCIONES,
 };
 
 // En el servidor se usa con require(); en el modo práctica del navegador,
