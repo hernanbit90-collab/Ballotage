@@ -211,3 +211,11 @@ test('bajada de línea: después el orden sigue desde donde estaba', () => {
   for (const p of g.order) S = jugar(S, p, { type: 'vote', vote: false }, rnd);
   assert.strictEqual(S.pub.game.candidate, g.order[(idx + 1) % 7]);
 });
+
+test('docs/motor.js es una copia exacta del reglamento', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const a = fs.readFileSync(path.join(__dirname, '..', 'engine.js'), 'utf8');
+  const b = fs.readFileSync(path.join(__dirname, '..', '..', 'docs', 'motor.js'), 'utf8');
+  assert.strictEqual(b, a, 'copiá functions/engine.js a docs/motor.js');
+});

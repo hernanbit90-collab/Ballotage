@@ -1,35 +1,40 @@
 // BALLOTAGE — lo que corre en cada celular.
 // Solo muestra lo que el árbitro le deja ver y le manda pedidos.
 
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
-import { getAuth, signInAnonymously, onAuthStateChanged, connectAuthEmulator } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
-import { getDatabase, ref, onValue, set, onDisconnect, connectDatabaseEmulator } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js';
-import { getFunctions, httpsCallable, connectFunctionsEmulator } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-functions.js';
 import { firebaseConfig, REGION } from './config.js';
 import * as T from './textos.js';
 import * as A from './arte.js';
+import * as Practica from './practica.js';
 
 // ------------------------------------------------------------------ Firebase
 
+const FB = 'https://www.gstatic.com/firebasejs/11.0.2/';
 const params = new URLSearchParams(location.search);
 const EMU = params.has('emu');
 const cfg = EMU
   ? { apiKey: 'demo', projectId: 'demo-ballotage', databaseURL: 'http://127.0.0.1:9000/?ns=demo-ballotage' }
   : firebaseConfig;
 const configurado = EMU || !String(cfg.apiKey).includes('PEGAR_ACA');
+// Modo práctica: vos contra bots, todo en el navegador. Es el modo que se
+// usa mientras Firebase no esté configurado, o con ?practica en el link.
+const PRACTICA = params.has('practica') || !configurado;
 
 let auth, db, llamar;
-if (configurado) {
-  const app = initializeApp(cfg);
-  auth = getAuth(app);
-  db = getDatabase(app);
-  const fns = getFunctions(app, REGION);
+const fb = {};
+if (!PRACTICA) {
+  const [app, au, da, fu] = await Promise.all(
+    ['firebase-app.js', 'firebase-auth.js', 'firebase-database.js', 'firebase-functions.js'].map((f) => import(FB + f)));
+  Object.assign(fb, au, da);
+  const fapp = app.initializeApp(cfg);
+  auth = au.getAuth(fapp);
+  db = da.getDatabase(fapp);
+  const fns = fu.getFunctions(fapp, REGION);
   if (EMU) {
-    connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-    connectDatabaseEmulator(db, '127.0.0.1', 9000);
-    connectFunctionsEmulator(fns, '127.0.0.1', 5001);
+    au.connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+    da.connectDatabaseEmulator(db, '127.0.0.1', 9000);
+    fu.connectFunctionsEmulator(fns, '127.0.0.1', 5001);
   }
-  llamar = httpsCallable(fns, 'ballotage');
+  llamar = fu.httpsCallable(fns, 'ballotage');
 }
 
 // ------------------------------------------------------------------ Estado local
@@ -75,7 +80,7 @@ async function pedir(datos) {
   st.ocupado = true;
   document.body.classList.add('ocupado');
   try {
-    const r = await llamar(datos);
+    const r = PRACTICA ? await Practica.pedir(datos) : await llamar(datos);
     return r.data;
   } catch (e) {
     toast(e.message || 'Algo falló. Probá de nuevo.', 'error');
@@ -91,12 +96,13 @@ const jugar = (action) => pedir({ op: 'act', code: st.code, action });
 // ------------------------------------------------------------------ Conexión a una sala
 
 function salirDeSala(msg) {
+  if (PRACTICA) Practica.detener();
   st.cancelar.forEach((f) => f());
   st.cancelar = [];
   Object.assign(st, { code: null, pid: null, pub: null, priv: null, presence: {}, modal: null, rolVisto: false, verRol: false,
     ultimoVoto: null, ultimaCuenta: null, ultimaEncuesta: null, ultimoEvento: null });
   guardado.set('code', null);
-  history.replaceState(null, '', location.pathname + (EMU ? '?emu' : ''));
+  history.replaceState(null, '', location.pathname + (EMU ? '?emu' : params.has('practica') ? '?practica' : ''));
   pantallaInicio();
   if (msg) toast(msg);
 }
@@ -107,7 +113,7 @@ function entrarASala(code) {
   st.code = code;
   guardado.set('code', code);
   const base = 'rooms/' + code + '/';
-  const off1 = onValue(ref(db, base + 'auth/' + st.uid), (s) => {
+  const off1 = fb.onValue(fb.ref(db, base + 'auth/' + st.uid), (s) => {
     const pid = s.val();
     if (!pid) {
       if (st.pid) salirDeSala('Ya no estás en la sala ' + code + '.');
@@ -124,22 +130,45 @@ function entrarASala(code) {
 function escucharSala(base, pid) {
   // Las escuchas viejas (si cambió el pid) se reemplazan.
   st.cancelar.splice(1).forEach((f) => f());
-  const presRef = ref(db, base + 'presence/' + pid);
-  const offCon = onValue(ref(db, '.info/connected'), (s) => {
+  const presRef = fb.ref(db, base + 'presence/' + pid);
+  const offCon = fb.onValue(fb.ref(db, '.info/connected'), (s) => {
     if (s.val() === true) {
-      onDisconnect(presRef).set(false);
-      set(presRef, true).catch(() => {});
+      fb.onDisconnect(presRef).set(false);
+      fb.set(presRef, true).catch(() => {});
     }
   });
-  const offPub = onValue(ref(db, base + 'pub'), (s) => { st.pub = s.val(); dibujar(); }, () => {});
-  const offPriv = onValue(ref(db, base + 'priv/' + pid), (s) => { st.priv = s.val() || {}; dibujar(); }, () => {});
-  const offPres = onValue(ref(db, base + 'presence'), (s) => { st.presence = s.val() || {}; dibujar(); }, () => {});
-  st.cancelar.push(offCon, offPub, offPriv, offPres, () => set(presRef, false).catch(() => {}));
+  const offPub = fb.onValue(fb.ref(db, base + 'pub'), (s) => { st.pub = s.val(); dibujar(); }, () => {});
+  const offPriv = fb.onValue(fb.ref(db, base + 'priv/' + pid), (s) => { st.priv = s.val() || {}; dibujar(); }, () => {});
+  const offPres = fb.onValue(fb.ref(db, base + 'presence'), (s) => { st.presence = s.val() || {}; dibujar(); }, () => {});
+  st.cancelar.push(offCon, offPub, offPriv, offPres, () => fb.set(presRef, false).catch(() => {}));
 }
 
 // ------------------------------------------------------------------ Pantalla de inicio
 
+function pantallaPractica() {
+  $app.className = 'inicio';
+  $app.innerHTML = `
+    <div class="portada">
+      ${A.logo()}
+      <p class="bajada">El juego donde la campaña se pudre desde adentro.</p>
+    </div>
+    <div class="aviso practica">🤖 <b>Modo práctica</b>: jugás vos contra bots, en este celular. ${configurado ? '' : 'Para jugar online con amigos hay que configurar Firebase (ver COMO_PUBLICAR.md).'}</div>
+    <label class="campo">Tu apodo
+      <input id="apodo" maxlength="16" autocomplete="nickname" placeholder="Ej: La Tana" value="${esc(guardado.get('name') || '')}">
+    </label>
+    <div class="tarjeta">
+      <h3>¿Cuántos en la mesa?</h3>
+      <div class="cantidades">${[5, 6, 7, 8, 9, 10].map((n) => `<button class="btn cant ${n === 7 ? 'elegida' : ''}" data-act="cantidad" data-n="${n}">${n}</button>`).join('')}</div>
+      <p class="nota">Vos + bots que votan, mienten y se hacen los distraídos.</p>
+    </div>
+    <button class="btn grande primario" data-act="practicar">¡Largar la campaña!</button>
+    <button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button>
+    ${configurado ? `<a class="btn link" href="${location.pathname}">🌐 Jugar online con amigos</a>` : ''}
+  `;
+}
+
 function pantallaInicio() {
+  if (PRACTICA) return pantallaPractica();
   const codigo = (params.get('sala') || '').toUpperCase();
   $app.className = 'inicio';
   $app.innerHTML = `
@@ -167,6 +196,7 @@ function pantallaInicio() {
     <div class="o">o</div>
     <button class="btn grande secundario" data-act="crear">Crear sala nueva</button>
     <button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button>
+    <a class="btn link" href="?practica">🤖 Practicar contra bots</a>
   `;
   const codigoInput = document.getElementById('codigo');
   codigoInput.addEventListener('input', () => {
@@ -215,7 +245,7 @@ function pantallaEspera() {
     <div class="codigo-sala">
       <span>Código de sala</span>
       <strong>${st.code}</strong>
-      <button class="btn chico" data-act="compartir" data-link="${esc(link)}">📲 Compartir link</button>
+      ${PRACTICA ? '<small>Partida de práctica contra bots</small>' : `<button class="btn chico" data-act="compartir" data-link="${esc(link)}">📲 Compartir link</button>`}
     </div>
     <h2>Militantes en el búnker <small>${n}/10</small></h2>
     <ul class="lista-jugadores">
@@ -611,6 +641,22 @@ document.addEventListener('click', async (ev) => {
   if (d.confirm && !confirm(d.confirm)) return;
 
   switch (act) {
+    case 'cantidad':
+      document.querySelectorAll('.cant').forEach((x) => x.classList.toggle('elegida', x === b));
+      break;
+    case 'practicar': {
+      const name = apodo();
+      if (!name) return;
+      const n = Number((document.querySelector('.cant.elegida') || {}).dataset?.n || 7);
+      Object.assign(st, { code: 'BOTS', pid: 'p1' });
+      Practica.iniciar(name, n, (e) => {
+        st.pub = e.pub;
+        st.priv = e.priv;
+        st.presence = e.presence;
+        dibujar();
+      });
+      break;
+    }
     case 'crear': {
       if (!configurado) return toast('Primero hay que configurar Firebase.', 'error');
       const name = apodo();
@@ -644,6 +690,7 @@ document.addEventListener('click', async (ev) => {
       if (confirm('¿Sacar a ' + nombre(d.pid) + ' de la sala?')) jugar({ type: 'kick', target: d.pid });
       break;
     case 'salir':
+      if (PRACTICA) { salirDeSala(); break; }
       if (confirm('¿Salir de la sala?')) {
         const r = await jugar({ type: 'leave' });
         if (r) salirDeSala();
@@ -700,13 +747,13 @@ setInterval(() => {
 
 // ------------------------------------------------------------------ Arranque
 
-if (!configurado) {
+if (PRACTICA) {
   pantallaInicio();
 } else {
   $app.innerHTML = '<div class="cargando">Conectando con el búnker…</div>';
-  onAuthStateChanged(auth, (u) => {
+  fb.onAuthStateChanged(auth, (u) => {
     if (!u) {
-      signInAnonymously(auth).catch((e) => {
+      fb.signInAnonymously(auth).catch((e) => {
         $app.innerHTML = `<div class="aviso">No me pude conectar: ${esc(e.message)}</div>`;
       });
       return;

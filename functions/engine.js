@@ -1,4 +1,6 @@
-// Reglamento de BALLOTAGE. Funciones puras: reciben el estado de una sala,
+// Reglamento de BALLOTAGE. (docs/motor.js es una copia exacta: si cambiás
+// este archivo, copialo también allá; la prueba automática lo controla.)
+// Funciones puras: reciben el estado de una sala,
 // aplican una jugada y devuelven el estado nuevo. No sabe nada de Firebase,
 // así se puede probar con miles de partidas simuladas.
 //
@@ -596,7 +598,12 @@ function aplicar(S, pid, a, rnd) {
   }
 }
 
-module.exports = {
+const API = {
   ROLES, BANDOS, CARTAS, PODERES, OPERADORES_POR_CANTIDAD,
   ErrorJuego, crearSala, unirse, limpiarNombre, aplicar, puedeSerVocero, tableroEscandalos, lista,
 };
+
+// En el servidor se usa con require(); en el modo práctica del navegador,
+// una copia (docs/motor.js) queda en globalThis.BallotageEngine.
+if (typeof module !== 'undefined' && module.exports) module.exports = API;
+else globalThis.BallotageEngine = API;

@@ -376,3 +376,10 @@ h2 .ico-poder { width: 36px; height: 36px; margin: 0; }
   .bol .dorso { display: none; }
   .bol .frente, .resultado { transform: none; opacity: 1; }
 }
+
+/* Modo práctica */
+.aviso.practica { background: var(--cielo); }
+.cantidades { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.btn.cant { padding: .6em 0; font-family: var(--fuente-titulo); font-size: 1.1rem; }
+.btn.cant.elegida { background: var(--amarillo); transform: translateY(2px); }
+a.btn.link { text-align: center; }
