@@ -13,5 +13,10 @@ export const firebaseConfig = {
   appId: 'PEGAR_ACA',
 };
 
-// Región donde corre el árbitro. No la cambies salvo que sepas lo que hacés.
+// Dónde corre el árbitro:
+//   'gratis'   -> en el celular del anfitrión (plan gratuito, sin tarjeta).
+//   'servidor' -> en Firebase Cloud Functions (plan Blaze; nadie puede espiar).
+export const MODO = 'gratis';
+
+// Región donde corre el árbitro en modo 'servidor'. No la cambies salvo que sepas lo que hacés.
 export const REGION = 'us-central1';
