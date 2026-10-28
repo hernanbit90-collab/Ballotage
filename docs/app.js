@@ -260,7 +260,7 @@ function pantallaEspera() {
           <span class="punto ${st.presence[pid] ? 'on' : ''}"></span>
           <span class="nombre">${esc(p.players[pid].name)}${pid === st.pid ? ' <em>(vos)</em>' : ''}</span>
           ${pid === p.host ? '<span class="chapa">anfitrión</span>' : ''}
-          ${soyHost && pid !== st.pid ? `<button class="btn chico peligro" data-act="echar" data-pid="${pid}">Sacar</button>` : ''}
+          ${soyHost && pid !== st.pid && !PRACTICA ? `<button class="btn chico peligro" data-act="echar" data-pid="${pid}">Sacar</button>` : ''}
         </li>`).join('')}
     </ul>
     ${panelAjustes(p, soyHost)}
@@ -298,8 +298,8 @@ function pantallaJuego() {
   detectarNovedades(g);
   const yo = st.pid;
   const vivo = g.alive[yo];
-  const terminado = g.phase === 'ended';
-  $app.className = 'juego';
+  // La pantalla final espera a que terminen las animaciones (no spoilear).
+  const terminado = g.phase === 'ended' && !capaAbierta;
   $app.innerHTML = `
     <header class="barra">
       ${A.logoChico()}
@@ -310,16 +310,16 @@ function pantallaJuego() {
     </header>
     ${!vivo && !terminado ? `<div class="aviso fantasma">👻 Te hicieron un Carpetazo. Ya no votás ni hablás: mirá en silencio.</div>` : ''}
     ${terminado ? pantallaFinal(g) : ''}
-    <section class="accion">${terminado ? '' : panelAccion(g)}</section>
-    ${tablero(g)}
+    <section class="accion">${terminado ? '' : g.phase === 'ended' ? esperando('Contando los votos del escrutinio…') : panelAccion(g)}</section>
     ${filaJugadores(g)}
     <section class="cronica">
       <h3>📰 Último momento</h3>
-      <ul>${lista(g.log).slice(-6).reverse().map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
+      <ul>${lista(g.log).slice(-4).reverse().map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
     </section>
+    ${tablero(g)}
   `;
   dibujarModal();
-  if (!st.rolVisto && st.priv && st.priv.role && !terminado) {
+  if (!st.rolVisto && st.priv && st.priv.role && g.phase !== 'ended') {
     st.rolVisto = true;
     st.modal = 'rol';
     dibujarModal();
@@ -408,7 +408,9 @@ function panelAccion(g) {
         ${g.vetoDenied ? '<p class="nota">El Jefe rechazó el veto: tenés que publicar una.</p>' : ''}`;
     }
     case 'vetoReply': {
-      if (g.chief !== yo) return esperando(`El Vocero pidió <b>VETO</b>. <b>${esc(nombre(g.chief))}</b> decide.`);
+      if (g.chief !== yo) return esperando(g.vocero === yo
+        ? `Pediste <b>VETO</b>. Ahora decide <b>${esc(nombre(g.chief))}</b>, el Jefe de Campaña.`
+        : `<b>${esc(nombre(g.vocero))}</b> (Vocero) pidió <b>VETO</b>. Decide <b>${esc(nombre(g.chief))}</b>.`);
       return `<h2>¡El Vocero pide VETO! ${A.selloVetado()}</h2>
         <p>Si aceptás, las dos cartas van a La Trituradora y sube la Crisis.</p>
         <div class="dos">
@@ -451,26 +453,26 @@ function panelDebate(g) {
     </div>
     <ol class="oradores">${orden.map((p, i) => `<li class="${i < d.idx ? 'hablo' : i === d.idx ? 'ahora' : ''}">${esc(nombre(p))}</li>`).join('')}</ol>
     ${habla === yo ? '<button class="btn grande primario" data-act="pasarPalabra">Terminé, paso la palabra</button>' : ''}
-    ${soyHost && habla !== yo ? `<div class="dos"><button class="btn secundario" data-act="pasarPalabra">Siguiente orador</button><button class="btn" data-act="cortarDebate" data-confirm="¿Cortar el debate e ir a votar?">Ir a votar ya</button></div>` : ''}
+    ${soyHost && habla !== yo && g.alive[yo] ? `<div class="dos"><button class="btn secundario" data-act="pasarPalabra">Siguiente orador</button><button class="btn" data-act="cortarDebate" data-confirm="¿Cortar el debate e ir a votar?">Ir a votar ya</button></div>` : ''}
     ${!g.alive[yo] ? '<p class="nota">Los fantasmas no hablan.</p>' : ''}`;
 }
 
 function panelDeclarar(g) {
   const yo = st.pid;
   const r = lista(g.history)[lista(g.history).length - 1] || {};
-  const c = r.claims || {};
+  const ya = r.declared || {};
   const cargo = yo === g.chief ? 'chief' : yo === g.vocero ? 'vocero' : null;
   const total = cargo === 'chief' ? 3 : 2;
-  const estado = (p, k) => `<li>${esc(nombre(p))}: ${c[k] === undefined ? '<i>pensando qué decir…</i>' : `<b>${A.combo(c[k], k === 'chief' ? 3 : 2)}</b>`}</li>`;
+  const estado = (p, k) => `<li>${k === 'chief' ? '🪪 Jefe' : '🎤 Vocero'} <b>${esc(nombre(p))}</b>${p === yo ? ' (vos)' : ''}: ${ya[k] ? '✔ ya declaró' : '<i>pensando qué decir…</i>'}</li>`;
   let mio = '';
-  if (cargo && c[cargo] === undefined) {
+  if (cargo && !ya[cargo]) {
     const opciones = [];
     for (let pr = total; pr >= 0; pr--) opciones.push(pr);
     mio = `<p>${cargo === 'chief' ? '¿Qué te llegó de la Mesa de Entradas (las 3 cartas)?' : '¿Qué te pasó el Jefe (las 2 cartas)?'} <b>Podés mentir.</b></p>
       <div class="opciones declarar">${opciones.map((pr) => `<button class="btn opcion" data-act="declarar" data-n="${pr}">${A.combo(pr, total)}</button>`).join('')}</div>`;
   }
   return `<h2>🗣️ Declaraciones</h2>
-    ${mio || '<p>El Jefe y el Vocero cuentan qué cartas vieron. ¿Les creés?</p>'}
+    ${mio || '<p>El Jefe y el Vocero cuentan qué cartas vieron. Las dos declaraciones se muestran juntas.</p>'}
     <ul class="declaraciones">${estado(g.chief, 'chief')}${estado(g.vocero, 'vocero')}</ul>`;
 }
 
@@ -505,7 +507,7 @@ function pantallaFinal(g) {
   const gane = miBando === g.winner;
   const soyHost = st.pub.host === st.pid;
   return `<section class="final ${ganoCampana ? 'campana' : 'operadores'}">
-    ${A.titularFinal(ganoCampana)}
+    ${A.titularFinal(ganoCampana, g.proposals >= 5 ? 'prop' : g.scandals >= 6 ? 'esc' : 'topo')}
     <p class="razon">${esc(g.winReason)}</p>
     <p class="vos">${gane ? '🎉 ¡Ganaste!' : '😩 Perdiste. Hay revancha.'}</p>
     <div class="roles-finales">
@@ -547,12 +549,23 @@ function detectarNovedades(g) {
         capa(`<div class="aviso-grande">${A.selloVetado()}<h2>¡VETADO!</h2><p>Las dos cartas fueron a La Trituradora y sube la Crisis.</p></div>`, 'aviso-capa', 3500);
         break;
       case 'vetoDenied': toast('El Jefe rechazó el Veto: el Vocero tiene que publicar.'); break;
-      case 'carpetazo':
-        capa(`<div class="aviso-grande">${A.iconoPoder('carpetazo')}<h2>¡Carpetazo!</h2><p><b>${esc(nombre(ev.target))}</b> quedó afuera de la campaña. Nadie sabe qué era.</p></div>`, 'aviso-capa', 4000);
+      case 'carpetazo': {
+        const eraTopo = g.reveal && g.reveal[ev.target] === 'topo';
+        const quien = ev.target === st.pid ? '<b>¡Te hicieron un Carpetazo a vos!</b> Quedaste afuera: desde ahora, calladito.' : `<b>${esc(nombre(ev.target))}</b> quedó afuera de la campaña.`;
+        capa(`<div class="aviso-grande">${A.iconoPoder('carpetazo')}<h2>¡Carpetazo!</h2><p>${quien} ${eraTopo ? '<b>¡Y era El Topo!</b>' : 'Nadie sabe qué era.'}</p></div>`, 'aviso-capa', 4500);
         break;
-      case 'encuesta': toast(nombre(ev.by) + ' encuestó a ' + nombre(ev.target) + '.'); break;
-      case 'bajada': toast('Bajada de línea: el próximo candidato es ' + nombre(ev.target) + '.'); break;
-      case 'carpeta': toast(nombre(ev.by) + ' ya miró la carpeta.'); break;
+      }
+      case 'claims': {
+        const r = lista(g.history).find((x) => x.claims && x.round === g.history[g.history.length - 1].round) || lista(g.history).filter((x) => x.claims).pop();
+        if (r) capa(`<div class="aviso-grande"><h2>🗣️ Declaraciones</h2>
+          <p>🪪 Jefe <b>${esc(nombre(r.candidate))}</b>: ${A.combo(r.claims.chief, 3)}</p>
+          <p>🎤 Vocero <b>${esc(nombre(r.nominee))}</b>: ${A.combo(r.claims.vocero, 2)}</p>
+          <p class="nota">¿Les creés?</p></div>`, 'aviso-capa', 5000);
+        break;
+      }
+      case 'encuesta': if (ev.by !== st.pid) toast(nombre(ev.by) + ' encuestó a ' + nombre(ev.target) + '.'); break;
+      case 'bajada': toast('Bajada de línea: el próximo candidato es ' + (ev.target === st.pid ? 'vos' : nombre(ev.target)) + '.'); break;
+      case 'carpeta': if (ev.by !== st.pid) toast(nombre(ev.by) + ' ya miró la carpeta.'); break;
     }
   }
   // Resultado de encuesta (solo lo ve quien encuestó).
@@ -573,7 +586,7 @@ function capa(html, clase, ms) {
 }
 function siguienteCapa() {
   const item = cola.shift();
-  if (!item) { capaAbierta = false; return; }
+  if (!item) { capaAbierta = false; dibujar(); return; }
   capaAbierta = true;
   const c = document.createElement('div');
   c.className = 'capa ' + item.clase;
@@ -590,7 +603,7 @@ function siguienteCapa() {
   if (item.ms) setTimeout(cerrar, item.ms);
 }
 // Para el modo práctica: los bots esperan mientras mirás una animación.
-window.ballotageOcupado = () => capaAbierta || !!document.querySelector('.confirmar');
+window.ballotageOcupado = () => capaAbierta || !!document.querySelector('.confirmar, #modal');
 
 function animarUrna(lv) {
   const votos = lv.votes || {};
@@ -605,7 +618,7 @@ function animarUrna(lv) {
       </div>`).join('')}
     </div>
   </div>`;
-  capa(html, 'urna-capa', 5500);
+  capa(html, 'urna-capa', 5000 + 300 * Object.keys(votos).length);
 }
 
 function mostrarPublicacion(tipo, idx, caos) {

@@ -434,7 +434,7 @@ function pasarPalabra(S, pid, a, ahora) {
   exigir(g.phase === 'debate', 'No hay debate en curso.');
   const d = g.debate;
   if (a.all) {
-    exigir(S.pub.host === pid, 'Solo el anfitrión puede cortar el debate.');
+    exigir(S.pub.host === pid && g.alive[pid], 'Solo el anfitrión en carrera puede cortar el debate.');
     log(S, 'El anfitrión cortó el debate. ¡A votar!');
     abrirVotacion(S);
     return;
@@ -442,7 +442,7 @@ function pasarPalabra(S, pid, a, ahora) {
   if (a.idx !== undefined && a.idx !== d.idx) return; // ya lo pasó otro
   const orden = lista(d.order);
   const habla = orden[d.idx];
-  exigir(pid === habla || pid === S.pub.host || ahora >= d.turnEnd - TOLERANCIA_MS,
+  exigir(pid === habla || (pid === S.pub.host && g.alive[pid]) || ahora >= d.turnEnd - TOLERANCIA_MS,
     'Todavía está hablando ' + nombre(S, habla) + '.');
   d.idx += 1;
   if (d.idx >= orden.length) {
@@ -565,16 +565,21 @@ function declarar(S, pid, propuestas) {
   exigir(g.phase === 'declare', 'No es momento de declarar.');
   exigir(pid === g.chief || pid === g.vocero, 'Solo declaran el Jefe y el Vocero.');
   const r = rondaActual(S);
-  r.claims = objeto(r.claims);
+  // Se guardan en secreto y se muestran juntas, así nadie declara copiando al otro.
+  S.sec.claims = objeto(S.sec.claims);
+  r.declared = objeto(r.declared);
   const cargo = pid === g.chief ? 'chief' : 'vocero';
-  exigir(r.claims[cargo] === undefined, 'Ya hiciste tu declaración.');
+  exigir(S.sec.claims[cargo] === undefined, 'Ya hiciste tu declaración.');
   const total = cargo === 'chief' ? 3 : 2;
   exigir(Number.isInteger(propuestas) && propuestas >= 0 && propuestas <= total, 'Declaración inválida.');
-  r.claims[cargo] = propuestas;
-  log(S, nombre(S, pid) + (cargo === 'chief' ? ' (Jefe)' : ' (Vocero)') + ' dice que le llegaron ' +
-    propuestas + ' Propuesta' + (propuestas === 1 ? '' : 's') + ' y ' + (total - propuestas) +
-    ' Escándalo' + (total - propuestas === 1 ? '' : 's') + '.');
-  if (r.claims.chief !== undefined && r.claims.vocero !== undefined) {
+  S.sec.claims[cargo] = propuestas;
+  r.declared[cargo] = true;
+  if (S.sec.claims.chief !== undefined && S.sec.claims.vocero !== undefined) {
+    r.claims = { chief: S.sec.claims.chief, vocero: S.sec.claims.vocero };
+    S.sec.claims = {};
+    const frase = (p, n, t) => nombre(S, p) + ' dice ' + n + ' Propuesta' + (n === 1 ? '' : 's') + ' y ' + (t - n) + ' Escándalo' + (t - n === 1 ? '' : 's');
+    log(S, 'Declaraciones: ' + frase(g.chief, r.claims.chief, 3) + ' (Jefe); ' + frase(g.vocero, r.claims.vocero, 2) + ' (Vocero).');
+    evento(S, 'claims', {});
     const poder = g.pendingPower;
     g.pendingPower = '';
     despuesDePublicar(S, poder);

@@ -276,10 +276,21 @@ const RETRATOS = {
 };
 export const retratoRol = (rol) => RETRATOS[rol] || '';
 
-export function titularFinal(ganoCampana) {
+// `como`: 'prop' (5 Propuestas), 'esc' (6 Escándalos) o 'topo' (por El Topo).
+export function titularFinal(ganoCampana, como) {
   const sup = ganoCampana ? 'EDICIÓN ESPECIAL' : 'ÚLTIMO MOMENTO';
-  const tit = ganoCampana ? ['¡GANAMOS EN', 'PRIMERA VUELTA!'] : ['¡OPERACIÓN', 'CONSUMADA!'];
-  const baj = ganoCampana ? 'Festejos con bombos y choripán en el búnker' : 'Los de Enfrente brindan: la campaña se hundió';
+  const textos = {
+    campana: {
+      prop: [['¡GANAMOS EN', 'PRIMERA VUELTA!'], 'Festejos con bombos y choripán en el búnker'],
+      topo: [['¡CAYÓ', 'EL TOPO!'], 'Un carpetazo a tiempo salvó la campaña'],
+    },
+    operadores: {
+      esc: [['¡OPERACIÓN', 'CONSUMADA!'], 'Los de Enfrente brindan: la campaña se hundió'],
+      topo: [['¡EL TOPO TIENE', 'EL MICRÓFONO!'], 'Lo eligieron Vocero en plena zona roja'],
+    },
+  };
+  const lado = textos[ganoCampana ? 'campana' : 'operadores'];
+  const [tit, baj] = lado[como] || Object.values(lado)[0];
   return `<svg class="titular-final" viewBox="0 0 320 150" aria-label="${esc(tit.join(' '))}">
     <rect x="6" y="6" width="308" height="138" fill="#f2efe6" stroke="#1b1446" stroke-width="3"/>
     <text x="160" y="30" text-anchor="middle" font-family="Bowlby One, Arial Black, sans-serif" font-size="20" fill="#1d1a2b">EL BOCHINCHE</text>

@@ -15,6 +15,7 @@ const YO = 'p1';
 let S = null;
 let avisar = null;
 let reloj = null;
+let esperaba = false; // el humano estaba mirando una animación
 let dicho = null; // lo que dijo el bot que está hablando
 let vistas = {}; // cuántas Propuestas vio cada bot en su mano, para declarar
 
@@ -86,7 +87,14 @@ function turnoBot() {
   if (!S || S.pub.status !== 'playing') return;
   // Mientras el humano mira una animación (urna, carta publicada), esperan.
   if (globalThis.ballotageOcupado && globalThis.ballotageOcupado()) {
+    esperaba = true;
     reloj = setTimeout(turnoBot, 400);
+    return;
+  }
+  // Recién se cerró la animación: damos tiempo a ver la pantalla antes de jugar.
+  if (esperaba) {
+    esperaba = false;
+    reloj = setTimeout(turnoBot, 1600 + rnd(1000));
     return;
   }
   const jugada = elegirJugada();

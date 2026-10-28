@@ -87,7 +87,7 @@ function partidaAlAzar(n, seed) {
         break;
       }
       case 'declare':
-        if (!(g.history[g.history.length - 1].claims || {}).chief) S = jugar(S, g.chief, { type: 'declare', proposals: rnd(4) }, rnd);
+        if (!(g.history[g.history.length - 1].declared || {}).chief) S = jugar(S, g.chief, { type: 'declare', proposals: rnd(4) }, rnd);
         if (S.pub.game.phase === 'declare') S = jugar(S, g.vocero, { type: 'declare', proposals: rnd(3) }, rnd);
         break;
       case 'vote':
@@ -275,6 +275,8 @@ test('declaraciones del Jefe y el Vocero después de publicar', () => {
   assert.strictEqual(S.pub.game.phase, 'declare');
   assert.throws(() => E.aplicar(JSON.parse(JSON.stringify(S)), voc, { type: 'declare', proposals: 3 }, rnd), /inválida/);
   S = jugar(S, voc, { type: 'declare', proposals: 1 }, rnd);
+  assert.strictEqual(S.pub.game.history[0].claims, undefined, 'la declaración se ve antes de tiempo');
+  assert.strictEqual(S.pub.game.history[0].declared.vocero, true);
   assert.throws(() => E.aplicar(JSON.parse(JSON.stringify(S)), voc, { type: 'declare', proposals: 1 }, rnd), /Ya hiciste/);
   S = jugar(S, chief, { type: 'declare', proposals: 2 }, rnd);
   assert.strictEqual(S.pub.game.phase, 'nominate');

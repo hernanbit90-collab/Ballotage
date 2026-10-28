@@ -237,14 +237,14 @@ small { opacity: .8; }
 .boletas-abiertas { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; margin-top: 10px; perspective: 600px; }
 .bol { position: relative; height: 92px; }
 .bol .dorso, .bol .frente { position: absolute; inset: 0 0 20px; border-radius: 10px; display: flex; align-items: center; justify-content: center; backface-visibility: hidden; transition: transform .6s; }
-.bol .dorso { background: var(--papel); font-size: 1.8rem; animation: dar-vuelta-a .6s 1.4s forwards; }
-.bol .frente { transform: rotateY(180deg); font-family: var(--fuente-titulo); font-size: 1.2rem; animation: dar-vuelta-b .6s 1.4s forwards; }
+.bol .dorso { background: var(--papel); font-size: 1.8rem; animation: dar-vuelta-a .5s .9s forwards; }
+.bol .frente { transform: rotateY(180deg); font-family: var(--fuente-titulo); font-size: 1.2rem; animation: dar-vuelta-b .5s .9s forwards; }
 .bol.si .frente { background: var(--verde); }
 .bol.no .frente { background: var(--rojo); }
 .bol span { position: absolute; bottom: 0; left: 0; right: 0; font-size: .75rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @keyframes dar-vuelta-a { to { transform: rotateY(-180deg); } }
 @keyframes dar-vuelta-b { to { transform: rotateY(0); } }
-.resultado { opacity: 0; animation: aparecer-r .4s 2s forwards; }
+.resultado { opacity: 0; animation: aparecer-r .4s 1.2s forwards; }
 @keyframes aparecer-r { to { opacity: 1; } }
 
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--amarillo); color: var(--tinta); padding: 10px 16px; border-radius: var(--radio); font-weight: 600; z-index: 100; box-shadow: var(--sombra); max-width: calc(100% - 32px); transition: opacity .5s; }
@@ -432,3 +432,7 @@ a.btn.link { text-align: center; }
 .aviso-grande .sello-vetado { width: 160px; height: 64px; }
 .aviso-grande .ico-poder { width: 80px; height: 80px; }
 .capa .tocar { position: absolute; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; }
+
+.ajustes h3 + .nota { margin-top: 0; }
+.ajustes .cantidades, .ajustes .dos { margin-bottom: 14px; }
+.aviso-grande .combo { justify-content: center; }
