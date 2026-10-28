@@ -1,0 +1,14 @@
+{
+  "name": "ballotage-arbitro",
+  "private": true,
+  "description": "El árbitro de BALLOTAGE (Firebase Cloud Functions).",
+  "main": "index.js",
+  "engines": { "node": "22" },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.4.0",
+    "firebase-functions": "^6.4.0"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$code": {
+        "auth": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid"
+          }
+        },
+        "pub": {
+          ".read": "auth != null && root.child('rooms').child($code).child('auth').child(auth.uid).exists()"
+        },
+        "presence": {
+          ".read": "auth != null && root.child('rooms').child($code).child('auth').child(auth.uid).exists()",
+          "$pid": {
+            ".write": "auth != null && root.child('rooms').child($code).child('auth').child(auth.uid).val() === $pid",
+            ".validate": "newData.isBoolean()"
+          }
+        },
+        "priv": {
+          "$pid": {
+            ".read": "auth != null && root.child('rooms').child($code).child('auth').child(auth.uid).val() === $pid"
+          }
+        }
+      }
+    }
+  }
+}
