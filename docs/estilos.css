@@ -152,26 +152,11 @@ small { opacity: .8; }
 .boleta { font: inherit; border: 4px solid transparent; border-radius: var(--radio); padding: 0; background: #fff; cursor: pointer; box-shadow: var(--sombra); overflow: hidden; }
 .boleta.si { background: var(--verde); }
 .boleta.no { background: var(--rojo); }
+.boleta-arte { display: block; width: 100%; }
 .boleta.elegida { border-color: var(--amarillo); transform: scale(1.04); }
-.boleta-txt { display: block; padding: 22px 0; font-family: var(--fuente-titulo); font-size: 1.8rem; color: #fff; }
 
-.mano { display: flex; justify-content: center; gap: 10px; margin: 12px 0; flex-wrap: wrap; }
+.mano { display: flex; justify-content: center; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
 .carta-btn { font: inherit; padding: 0; border: 0; background: none; cursor: pointer; }
-.carta { width: 100px; min-height: 140px; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 8px; font-weight: 800; box-shadow: var(--sombra); }
-.carta.prop { background: var(--turquesa); color: var(--tinta); }
-.carta.esc { background: var(--tinta); color: var(--amarillo); }
-
-/* ---------- Tablero ---------- */
-
-.tablero { display: grid; gap: 12px; }
-.casillas { display: grid; gap: 6px; }
-.tab-prop .casillas { grid-template-columns: repeat(5, 1fr); }
-.tab-esc .casillas { grid-template-columns: repeat(6, 1fr); }
-.casilla { min-height: 70px; border-radius: 8px; border: 2px dashed rgba(255, 255, 255, .4); display: flex; align-items: center; justify-content: center; text-align: center; font-size: .65rem; padding: 3px; }
-.casilla.llena { border-style: solid; background: var(--turquesa); color: var(--tinta); }
-.tab-esc .casilla.llena { background: var(--tinta); color: var(--amarillo); }
-.fila-baja { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.mini { background: rgba(255, 255, 255, .08); border-radius: 10px; padding: 8px; font-size: .8rem; text-align: center; }
 
 /* ---------- Jugadores ---------- */
 
@@ -182,7 +167,6 @@ small { opacity: .8; }
 .jug.offline .nom::after { content: ' 📵'; }
 .jug.muerto { filter: grayscale(1); opacity: .6; }
 .cara { position: relative; display: inline-block; }
-.avatar { display: inline-flex; width: 44px; height: 44px; border-radius: 50%; align-items: center; justify-content: center; background: var(--fucsia); font-family: var(--fuente-titulo); font-size: 1.2rem; }
 .marca { position: absolute; right: -10px; bottom: -6px; }
 .marca.vocero { left: -10px; right: auto; }
 .nom { font-weight: 600; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -244,7 +228,6 @@ small { opacity: .8; }
 .cacerolazo { font-family: var(--fuente-titulo); color: var(--amarillo); font-size: 1.3rem; margin-bottom: 10px; }
 
 .urna-escena { width: 100%; max-width: 520px; }
-.urna-simple { font-size: 4rem; }
 .resultado { font-size: 1.8rem; }
 .resultado.si { color: var(--verde); }
 .resultado.no { color: var(--rojo); }
@@ -275,5 +258,121 @@ small { opacity: .8; }
 .final .btn.link { color: inherit; }
 .roles-finales { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; margin: 12px 0; }
 .rf { background: rgba(255, 255, 255, .85); color: var(--tinta); border-radius: var(--radio); padding: 6px; display: flex; flex-direction: column; align-items: center; font-size: .8rem; }
-.rf .emoji-grande { font-size: 2.4rem; }
 .rf.topo { outline: 3px solid var(--rojo); }
+
+/* =================================================================
+   Etapa 2: arte
+   ================================================================= */
+
+.logo-arte svg { width: min(320px, 90%); height: auto; filter: drop-shadow(6px 6px 0 rgba(255, 46, 136, .7)); }
+.avatar { width: 46px; height: 46px; display: block; }
+.ico-cargo { width: 26px; height: 34px; filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, .35)); vertical-align: middle; }
+.ico-cargo.candidato { opacity: .9; }
+h2 .ico-cargo { width: 30px; height: 40px; }
+.formula .ico-cargo { width: 34px; height: 44px; }
+.marca .ico-cargo { width: 22px; height: 29px; }
+.opcion .ico-cargo { width: 18px; height: 24px; }
+.ico-poder { width: 30px; height: 30px; display: block; margin: 0 auto; }
+h2 .ico-poder { width: 36px; height: 36px; margin: 0; }
+.sello-vetado { width: 70px; height: 28px; color: var(--rojo); vertical-align: middle; }
+.btn.veto .sello-vetado { color: #fff; }
+.sobre { width: 40px; height: 30px; }
+
+/* Cartas */
+.volante, .titular { display: block; width: 100%; height: auto; }
+.volante { transform: rotate(var(--giro, 0deg)); filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, .3)); }
+.titular { filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, .3)); }
+.volante.grande, .titular.grande { width: min(240px, 70vw); margin: 0 auto 10px; animation: pegar .6s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes pegar { from { transform: scale(2.2) rotate(20deg); opacity: 0; } }
+.carta-mano { width: 92px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-weight: 800; font-size: .85rem; transition: transform .15s; }
+.carta-btn:hover .carta-mano, .carta-btn:focus .carta-mano { transform: translateY(-6px) rotate(-2deg); }
+.carta-mano.prop span { color: #0b8a78; }
+.carta-mano.esc span { color: var(--rojo); }
+.mano.chica .carta-mano { width: 86px; }
+
+/* Tablero de Propuestas: afiche pegado en una pared */
+.tablero { display: grid; gap: 14px; }
+.tab-prop {
+  padding: 12px;
+  border-radius: var(--radio);
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, .12) 2px, transparent 2px) 0 0 / 48px 24px,
+    linear-gradient(rgba(0, 0, 0, .12) 2px, transparent 2px) 0 0 / 48px 24px,
+    linear-gradient(90deg, rgba(0, 0, 0, .12) 2px, transparent 2px) 24px 12px / 48px 24px,
+    #b4553b;
+}
+.afiche { background: var(--papel); color: var(--tinta); border-radius: 4px; padding: 10px 8px 12px; box-shadow: 0 8px 18px rgba(0, 0, 0, .35); transform: rotate(-.6deg); }
+.afiche-cab { text-align: center; margin-bottom: 8px; }
+.afiche-sup { display: block; font-size: .65rem; font-weight: 800; letter-spacing: 2px; color: var(--fucsia); text-transform: uppercase; }
+.afiche-tit { display: block; font-family: var(--fuente-titulo); font-size: 1.6rem; line-height: 1; color: var(--noche); }
+.afiche-sub { display: block; font-size: .72rem; font-weight: 600; }
+.casilleros { display: grid; gap: 6px; }
+.casilleros.cinco { grid-template-columns: repeat(5, 1fr); }
+.casilleros.seis { grid-template-columns: repeat(6, 1fr); }
+.casillero { position: relative; aspect-ratio: 100 / 130; border: 2px dashed rgba(29, 26, 43, .35); border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center; }
+.casillero.lleno { border-color: transparent; }
+.casillero .num { position: absolute; top: 2px; left: 5px; font-family: var(--fuente-titulo); font-size: .75rem; opacity: .4; }
+.casillero.meta { background: repeating-linear-gradient(45deg, rgba(255, 210, 63, .5) 0 6px, transparent 6px 12px); border-color: var(--naranja); }
+.casillero.meta.lleno { background: none; }
+.meta-txt { font-family: var(--fuente-mano); font-size: .62rem; line-height: 1.1; color: var(--fucsia); padding: 0 2px; }
+.poder-txt { font-size: .55rem; font-weight: 800; line-height: 1.1; }
+.poder-txt.fin { color: var(--rojo); }
+.veto-mini .sello-vetado { width: 100%; height: auto; max-width: 52px; }
+
+/* Tablero de Escándalos: tapa de diario */
+.diario { background: #f2efe6; color: var(--tinta); border-radius: 4px; padding: 8px 8px 0; box-shadow: 0 8px 18px rgba(0, 0, 0, .35); transform: rotate(.5deg); overflow: hidden; }
+.diario-cab { text-align: center; border-bottom: 3px double var(--tinta); margin-bottom: 8px; padding-bottom: 4px; }
+.diario-nom { display: block; font-family: var(--fuente-titulo); font-size: 1.7rem; line-height: 1; letter-spacing: 1px; }
+.diario-sub { display: block; font-size: .62rem; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.diario .casillero { border-color: rgba(29, 26, 43, .3); }
+.diario .casillero.rojo:not(.lleno) { background: rgba(230, 57, 70, .1); border-color: rgba(230, 57, 70, .55); }
+.zona-roja { margin: 8px -8px 0; padding: 6px 8px; background: repeating-linear-gradient(-45deg, #e63946 0 10px, #c62835 10px 20px); color: #fff; font-size: .7rem; font-weight: 600; text-align: center; opacity: .55; }
+.zona-roja span { font-weight: 800; }
+.zona-roja.activa { opacity: 1; animation: titilar 2s infinite; }
+@keyframes titilar { 50% { filter: brightness(1.25); } }
+
+/* Fila baja: crisis, mazo y descarte */
+.fila-baja { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 8px; }
+.mini { background: rgba(255, 255, 255, .08); border-radius: 12px; padding: 6px; font-size: .72rem; text-align: center; font-weight: 600; }
+.mini svg { display: block; width: 100%; height: auto; max-height: 90px; }
+.mini span { display: block; margin-top: 3px; }
+.pulso { animation: pulso 1.2s infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes pulso { 50% { transform: scale(1.3); } }
+.hoja-tritu { animation: triturar 3s infinite; }
+@keyframes triturar { 0%, 60% { transform: translateY(0); } 100% { transform: translateY(14px); opacity: 0; } }
+
+/* Votación */
+.boleta { background: none !important; box-shadow: none; transition: transform .15s; }
+.boleta.elegida { transform: scale(1.06) rotate(-2deg); border-color: var(--amarillo); }
+.boleta:active { transform: scale(.97); }
+.urna { width: 170px; height: auto; display: block; margin: 0 auto; }
+.boletas-cayendo rect { animation: caer 1.3s ease-in both; transform-box: fill-box; }
+.boletas-cayendo .b2 { animation-delay: .25s; }
+.boletas-cayendo .b3 { animation-delay: .5s; }
+@keyframes caer { from { transform: translateY(-40px) rotate(-10deg); opacity: 0; } 70% { opacity: 1; } to { transform: translateY(46px) rotate(0); opacity: 0; } }
+.bol .dorso { background: none; }
+.bol .dorso .sobre { width: 56px; height: 42px; }
+
+/* Rol */
+.sobre-grande { width: min(260px, 80%); height: auto; animation: flotar 2.5s ease-in-out infinite; }
+@keyframes flotar { 50% { transform: translateY(-6px) rotate(1deg); } }
+.retrato { width: 150px; height: auto; display: block; margin: 0 auto; }
+.rol-revelado .retrato { animation: asomar .4s ease-out; }
+@keyframes asomar { from { transform: translateY(14px) scale(.9); opacity: 0; } }
+.rol-revelado.campana h2 { color: #0b8a78; }
+.rol-revelado.operador h2 { color: #7b3fc4; }
+.rol-revelado.topo h2 { color: var(--rojo); }
+.rf .retrato { width: 64px; }
+.credencial-afiliado svg { width: 100%; max-width: 340px; display: block; margin: 0 auto; animation: asomar .4s ease-out; }
+
+/* Final */
+.titular-final { width: 100%; height: auto; display: block; margin-bottom: 6px; transform: rotate(-1.5deg); filter: drop-shadow(4px 5px 0 rgba(0, 0, 0, .3)); }
+
+/* Pantalla de inicio */
+.inicio .portada { padding-top: 26px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .bol .dorso { display: none; }
+  .bol .frente, .resultado { transform: none; opacity: 1; }
+}
