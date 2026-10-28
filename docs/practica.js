@@ -3,6 +3,7 @@
 // Acá no hay secretos que proteger: es para aprender a jugar.
 
 import './motor.js';
+import { DICHOS } from './textos.js';
 
 const E = globalThis.BallotageEngine;
 const BOTS = ['Cacho', 'Pocha', 'Rulo', 'Mirta', 'Beto', 'Chiche', 'Nené', 'Coco', 'Lali', 'Tota'];
@@ -14,8 +15,10 @@ const YO = 'p1';
 let S = null;
 let avisar = null;
 let reloj = null;
+let dicho = null; // lo que dijo el bot que está hablando
+let vistas = {}; // cuántas Propuestas vio cada bot en su mano, para declarar
 
-export function iniciar(nombre, n, onCambio) {
+export function iniciar(nombre, n, onCambio, ajustes) {
   detener();
   avisar = onCambio;
   const ahora = Date.now();
@@ -23,6 +26,7 @@ export function iniciar(nombre, n, onCambio) {
   BOTS.filter((b) => b.toLowerCase() !== nombre.toLowerCase())
     .slice(0, n - 1)
     .forEach((b, i) => E.unirse(S, 'bot' + i, b, null, ahora + i + 1));
+  if (ajustes) E.aplicar(S, YO, Object.assign({ type: 'settings' }, ajustes), rnd);
   S = clonar(S);
   E.aplicar(S, YO, { type: 'start' }, rnd);
   emitir();
@@ -41,7 +45,7 @@ export async function pedir(datos) {
   if (datos.op !== 'act') throw new Error('En práctica no hay salas online.');
   if (datos.action && datos.action.type === 'leave') return { data: { ok: true } };
   const T = clonar(S);
-  E.aplicar(T, YO, datos.action || {}, rnd); // si es ilegal, tira ErrorJuego con el mensaje
+  E.aplicar(T, YO, datos.action || {}, rnd, Date.now()); // si es ilegal, tira ErrorJuego con el mensaje
   S = T;
   emitir();
   programar();
@@ -52,7 +56,9 @@ function emitir() {
   if (!S || !avisar) return;
   const presence = {};
   for (const p of Object.keys(S.pub.players)) presence[p] = true;
-  avisar({ pub: clonar(S.pub), priv: clonar((S.priv && S.priv[YO]) || {}), presence });
+  const pub = clonar(S.pub);
+  if (pub.game && pub.game.debate && dicho && dicho.round === pub.game.round) pub.game.debate.say = dicho;
+  avisar({ pub, priv: clonar((S.priv && S.priv[YO]) || {}), presence });
 }
 
 // ------------------------------------------------------------------ Bots
@@ -61,17 +67,33 @@ function programar() {
   clearTimeout(reloj);
   if (!S || S.pub.status !== 'playing') return;
   const g = S.pub.game;
-  const demora = g.phase === 'vote' ? 350 + rnd(500) : 1100 + rnd(900);
+  // Despacio, para que se pueda seguir qué hace cada uno.
+  let demora = g.phase === 'vote' ? 400 + rnd(600) : 2000 + rnd(1400);
+  if (g.phase === 'debate') {
+    // El bot "habla" un ratito y pasa la palabra (sin pasarse de su tiempo).
+    const d = g.debate;
+    const habla = E.lista(d.order)[d.idx];
+    if (habla !== YO && !(dicho && dicho.round === g.round && dicho.idx === d.idx)) {
+      dicho = { round: g.round, idx: d.idx, text: frase(habla) };
+      emitir();
+    }
+    demora = Math.min(2600 + rnd(2200), Math.max(300, d.turnEnd - Date.now()));
+  }
   reloj = setTimeout(turnoBot, demora);
 }
 
 function turnoBot() {
   if (!S || S.pub.status !== 'playing') return;
+  // Mientras el humano mira una animación (urna, carta publicada), esperan.
+  if (globalThis.ballotageOcupado && globalThis.ballotageOcupado()) {
+    reloj = setTimeout(turnoBot, 400);
+    return;
+  }
   const jugada = elegirJugada();
   if (!jugada) return; // le toca al humano
   try {
     const T = clonar(S);
-    E.aplicar(T, jugada.pid, jugada.action, rnd);
+    E.aplicar(T, jugada.pid, jugada.action, rnd, Date.now());
     S = T;
   } catch (e) {
     console.warn('El bot se equivocó:', e.message); // no debería pasar
@@ -124,14 +146,29 @@ function elegirJugada() {
       if (!falta) return null;
       return { pid: falta, action: { type: 'vote', vote: votoDe(falta) } };
     }
+    case 'debate': {
+      const d = g.debate;
+      const habla = E.lista(d.order)[d.idx];
+      if (!bot(habla)) return null; // el humano pasa la palabra (o se le acaba el reloj)
+      return { pid: habla, action: { type: 'debateNext', idx: d.idx } };
+    }
+    case 'declare': {
+      const r = E.lista(g.history)[E.lista(g.history).length - 1];
+      const c = r.claims || {};
+      if (bot(g.chief) && c.chief === undefined) return { pid: g.chief, action: { type: 'declare', proposals: declaracion(g.chief, 'chief') } };
+      if (bot(g.vocero) && c.vocero === undefined) return { pid: g.vocero, action: { type: 'declare', proposals: declaracion(g.vocero, 'vocero') } };
+      return null;
+    }
     case 'chiefDiscard': {
       if (!bot(g.chief)) return null;
+      vistas = { chief: E.lista(S.sec.hand).filter((c) => c === 'P').length };
       return { pid: g.chief, action: { type: 'chiefDiscard', index: aTriturar(g.chief, E.lista(S.sec.hand)) } };
     }
     case 'voceroDiscard': {
       const v = g.vocero;
       if (!bot(v)) return null;
       const mano = E.lista(S.sec.hand);
+      vistas.vocero = mano.filter((c) => c === 'P').length;
       if (g.scandals >= 5 && !g.vetoDenied && !esOp(v) && mano.every((c) => c === 'E')) {
         return { pid: v, action: { type: 'vetoRequest' } };
       }
@@ -184,4 +221,26 @@ function votoDe(p) {
   if (g.scandals >= 3 && formula[1] !== p && !confiables(p).includes(formula[1]) && rnd(3) === 0) return false;
   if (g.crisis >= 2) return rnd(10) < 8;
   return rnd(10) < 6;
+}
+
+// Los de la campaña dicen la verdad; los operadores a veces culpan al otro.
+function declaracion(p, cargo) {
+  const total = cargo === 'chief' ? 3 : 2;
+  let visto = vistas[cargo];
+  if (visto === undefined) visto = rnd(total + 1);
+  if (esOp(p) && visto > 0 && rnd(2) === 0) return visto - 1;
+  return visto;
+}
+
+function frase(p) {
+  const g = S.pub.game;
+  const llenar = (t) => t.replace('{J}', S.pub.players[g.candidate].name).replace('{V}', S.pub.players[g.nominee].name);
+  let lista;
+  if (p === g.candidate) lista = DICHOS.formulaJefe;
+  else if (p === g.nominee) lista = DICHOS.formulaVocero;
+  else {
+    const voto = votoDe(p);
+    lista = rnd(4) === 0 ? DICHOS.dudas : voto ? DICHOS.aFavor : DICHOS.enContra;
+  }
+  return llenar(azar(lista));
 }

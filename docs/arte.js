@@ -409,3 +409,14 @@ export function trituradora(n) {
     <span>La Trituradora · ${n}</span>
   </div>`;
 }
+
+// Combinación de cartas declarada: "2 Propuestas + 1 Escándalo" con fichitas.
+export function combo(propuestas, total) {
+  const e = total - propuestas;
+  let fichas = '';
+  for (let i = 0; i < propuestas; i++) fichas += '<i class="ficha p"></i>';
+  for (let i = 0; i < e; i++) fichas += '<i class="ficha e"></i>';
+  const texto = [propuestas ? propuestas + ' Propuesta' + (propuestas === 1 ? '' : 's') : '', e ? e + ' Escándalo' + (e === 1 ? '' : 's') : '']
+    .filter(Boolean).join(' + ');
+  return `<span class="combo"><span class="fichas">${fichas}</span>${texto}</span>`;
+}

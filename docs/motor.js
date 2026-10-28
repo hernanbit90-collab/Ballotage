@@ -31,6 +31,11 @@ const ESCANDALOS_ZONA_ROJA = 3;
 const ESCANDALOS_VETO = 5;
 const CRISIS_MAX = 3;
 
+// Debate: segundos que tiene cada jugador para hablar antes de votar.
+const DEBATE_OPCIONES = [0, 15, 30, 45, 60, 90];
+const DEBATE_POR_DEFECTO = 30;
+const TOLERANCIA_MS = 1500; // por diferencias de reloj entre celulares
+
 // Cantidad de operadores (sin contar al Topo) según jugadores.
 const OPERADORES_POR_CANTIDAD = { 5: 1, 6: 1, 7: 2, 8: 2, 9: 3, 10: 3 };
 
@@ -98,6 +103,7 @@ function crearSala(code, uid, name, ahora) {
       nextPid: 2,
       createdAt: ahora,
       players: { p1: { name, joinedAt: ahora } },
+      settings: { debate: DEBATE_POR_DEFECTO, declare: true },
     },
     priv: { p1: { pin: null } },
   };
@@ -156,6 +162,26 @@ function echar(S, pid, objetivo) {
   exigir(objetivo !== pid, 'No te podés echar a vos.');
   exigir(S.pub.players[objetivo], 'Ese jugador no está.');
   salir(S, objetivo);
+}
+
+function ajustes(S, pid, a) {
+  exigir(S.pub.host === pid, 'Solo el anfitrión cambia la configuración.');
+  exigir(S.pub.status === 'lobby', 'La configuración se cambia antes de empezar.');
+  const actual = config(S);
+  if (a.debate !== undefined) {
+    exigir(DEBATE_OPCIONES.includes(a.debate), 'Tiempo de debate inválido.');
+    actual.debate = a.debate;
+  }
+  if (a.declare !== undefined) actual.declare = !!a.declare;
+  S.pub.settings = actual;
+}
+
+function config(S) {
+  const c = S.pub.settings || {};
+  return {
+    debate: DEBATE_OPCIONES.includes(c.debate) ? c.debate : DEBATE_POR_DEFECTO,
+    declare: c.declare !== false,
+  };
 }
 
 // ---------------------------------------------------------------- Inicio
@@ -229,16 +255,20 @@ function empezar(S, pid, rnd) {
     winner: '',
     winReason: '',
     reveal: null,
-    event: { id: 0, type: 'start' },
+    eventId: 0,
+    events: [],
   };
   log(S, '¡Arrancó la campaña! Primer candidato a Jefe de Campaña: ' + nombre(S, order[inicio]) + '.');
 }
 
 // ---------------------------------------------------------------- Ayudas de ronda
 
+// Cada cosa que pasa queda en una lista (no se pisan entre sí), para que los
+// celulares muestren todas las animaciones y avisos en orden.
 function evento(S, type, extra) {
   const g = S.pub.game;
-  g.event = Object.assign({ id: ((g.event && g.event.id) || 0) + 1, type }, extra || {});
+  g.eventId = (g.eventId || 0) + 1;
+  g.events = lista(g.events).concat([Object.assign({ id: g.eventId, type }, extra || {})]).slice(-12);
 }
 
 function rondaActual(S) {
@@ -272,6 +302,8 @@ function siguienteRonda(S) {
   g.vocero = '';
   g.voted = {};
   g.power = '';
+  g.pendingPower = '';
+  g.debate = null;
   g.vetoDenied = false;
   g.phase = 'nominate';
   g.round += 1;
@@ -342,8 +374,8 @@ function avanzarCrisis(S, rnd) {
     r.chaos = true;
     r.published = carta;
   }
+  evento(S, 'chaos', { card: carta, n: carta === CARTAS.PROPUESTA ? g.proposals + 1 : g.scandals + 1 });
   publicar(S, carta, false, rnd);
-  evento(S, 'chaos', { card: carta });
   g.lastChief = '';
   g.lastVocero = '';
 }
@@ -358,19 +390,67 @@ function puedeSerVocero(S, pid) {
 
 // ---------------------------------------------------------------- Jugadas
 
-function nominar(S, pid, objetivo) {
+function nominar(S, pid, objetivo, ahora) {
   const g = S.pub.game;
   exigir(g.phase === 'nominate', 'No es momento de nominar.');
   exigir(g.candidate === pid, 'No sos el Candidato a Jefe de Campaña.');
   exigir(S.pub.players[objetivo], 'Ese jugador no existe.');
   exigir(puedeSerVocero(S, objetivo), 'Esa persona no puede ser Vocero en esta ronda.');
   g.nominee = objetivo;
+  g.history = lista(g.history);
+  g.history.push({ round: g.round, candidate: pid, nominee: objetivo });
+  const segs = config(S).debate;
+  if (!segs) {
+    log(S, nombre(S, pid) + ' propone a ' + nombre(S, objetivo) + ' como Vocero. ¡A votar!');
+    abrirVotacion(S);
+    return;
+  }
+  // Hablan primero los de la fórmula y después el resto, en orden de mesa.
+  const order = lista(g.order);
+  const desde = order.indexOf(pid);
+  const resto = [];
+  for (let k = 1; k < order.length; k++) {
+    const p = order[(desde + k) % order.length];
+    if (g.alive[p] && p !== objetivo) resto.push(p);
+  }
+  g.debate = { order: [pid, objetivo].concat(resto), idx: 0, secs: segs, turnEnd: ahora + segs * 1000 };
+  g.phase = 'debate';
+  log(S, nombre(S, pid) + ' propone a ' + nombre(S, objetivo) + ' como Vocero. ¡Arranca el debate!');
+}
+
+function abrirVotacion(S) {
+  const g = S.pub.game;
+  g.debate = null;
   g.phase = 'vote';
   g.voted = {};
   S.sec.votes = {};
-  g.history = lista(g.history);
-  g.history.push({ round: g.round, candidate: pid, nominee: objetivo });
-  log(S, nombre(S, pid) + ' propone a ' + nombre(S, objetivo) + ' como Vocero. ¡A votar!');
+}
+
+// Pasa la palabra al siguiente orador. Lo puede hacer quien está hablando,
+// el anfitrión, o cualquiera cuando se terminó el tiempo. `idx` evita que dos
+// celulares salteen dos oradores a la vez.
+function pasarPalabra(S, pid, a, ahora) {
+  const g = S.pub.game;
+  exigir(g.phase === 'debate', 'No hay debate en curso.');
+  const d = g.debate;
+  if (a.all) {
+    exigir(S.pub.host === pid, 'Solo el anfitrión puede cortar el debate.');
+    log(S, 'El anfitrión cortó el debate. ¡A votar!');
+    abrirVotacion(S);
+    return;
+  }
+  if (a.idx !== undefined && a.idx !== d.idx) return; // ya lo pasó otro
+  const orden = lista(d.order);
+  const habla = orden[d.idx];
+  exigir(pid === habla || pid === S.pub.host || ahora >= d.turnEnd - TOLERANCIA_MS,
+    'Todavía está hablando ' + nombre(S, habla) + '.');
+  d.idx += 1;
+  if (d.idx >= orden.length) {
+    log(S, 'Terminó el debate. ¡A votar!');
+    abrirVotacion(S);
+    return;
+  }
+  d.turnEnd = ahora + d.secs * 1000;
 }
 
 function votar(S, pid, voto, rnd) {
@@ -414,6 +494,7 @@ function votar(S, pid, voto, rnd) {
   g.vocero = g.nominee;
   g.lastChief = g.chief;
   g.lastVocero = g.vocero;
+  g.crisis = 0;
 
   if (g.scandals >= ESCANDALOS_ZONA_ROJA && S.sec.roles[g.vocero] === ROLES.TOPO) {
     terminar(S, BANDOS.OPERADORES, 'Zona roja: ¡El Topo fue elegido Vocero después del 3.er Escándalo!');
@@ -459,14 +540,44 @@ function descartarVocero(S, pid, idx, rnd) {
   S.priv[pid].hand = null;
   const r = rondaActual(S);
   r.published = carta;
+  evento(S, 'publish', { card: carta, n: carta === CARTAS.PROPUESTA ? g.proposals + 1 : g.scandals + 1 });
   const poder = publicar(S, carta, true, rnd);
-  evento(S, 'publish', { card: carta });
   if (g.phase === 'ended') return;
-  if (poder) {
-    r.power = poder;
-    activarPoder(S, poder);
-  } else {
-    siguienteRonda(S);
+  if (poder) r.power = poder;
+  if (config(S).declare) {
+    g.pendingPower = poder;
+    g.phase = 'declare';
+    r.claims = {};
+    log(S, 'Ahora el Jefe y el Vocero cuentan qué cartas les llegaron (pueden mentir).');
+    return;
+  }
+  despuesDePublicar(S, poder);
+}
+
+function despuesDePublicar(S, poder) {
+  if (poder) activarPoder(S, poder);
+  else siguienteRonda(S);
+}
+
+// El Jefe cuenta cuántas Propuestas vio entre 3 cartas; el Vocero, entre 2.
+function declarar(S, pid, propuestas) {
+  const g = S.pub.game;
+  exigir(g.phase === 'declare', 'No es momento de declarar.');
+  exigir(pid === g.chief || pid === g.vocero, 'Solo declaran el Jefe y el Vocero.');
+  const r = rondaActual(S);
+  r.claims = objeto(r.claims);
+  const cargo = pid === g.chief ? 'chief' : 'vocero';
+  exigir(r.claims[cargo] === undefined, 'Ya hiciste tu declaración.');
+  const total = cargo === 'chief' ? 3 : 2;
+  exigir(Number.isInteger(propuestas) && propuestas >= 0 && propuestas <= total, 'Declaración inválida.');
+  r.claims[cargo] = propuestas;
+  log(S, nombre(S, pid) + (cargo === 'chief' ? ' (Jefe)' : ' (Vocero)') + ' dice que le llegaron ' +
+    propuestas + ' Propuesta' + (propuestas === 1 ? '' : 's') + ' y ' + (total - propuestas) +
+    ' Escándalo' + (total - propuestas === 1 ? '' : 's') + '.');
+  if (r.claims.chief !== undefined && r.claims.vocero !== undefined) {
+    const poder = g.pendingPower;
+    g.pendingPower = '';
+    despuesDePublicar(S, poder);
   }
 }
 
@@ -498,6 +609,7 @@ function responderVeto(S, pid, acepta, rnd) {
   } else {
     g.vetoDenied = true;
     g.phase = 'voceroDiscard';
+    evento(S, 'vetoDenied', {});
     log(S, 'El Jefe de Campaña rechazó el Veto. El Vocero tiene que publicar una.');
   }
 }
@@ -529,6 +641,7 @@ function usarPoder(S, pid, objetivo) {
   if (p === PODERES.CARPETA) {
     S.priv[pid].peek = null;
     log(S, nombre(S, pid) + ' ya miró la carpeta.');
+    evento(S, 'carpeta', { by: pid });
     siguienteRonda(S);
     return;
   }
@@ -545,10 +658,12 @@ function usarPoder(S, pid, objetivo) {
     S.priv[pid].surveys[objetivo] = bandoDe(S.sec.roles[objetivo]);
     S.priv[pid].lastSurvey = objetivo;
     log(S, nombre(S, pid) + ' encuestó a ' + nombre(S, objetivo) + '. Solo el Jefe sabe el resultado.');
+    evento(S, 'encuesta', { by: pid, target: objetivo });
     siguienteRonda(S);
   } else if (p === PODERES.BAJADA) {
     g.special = objetivo;
     log(S, 'Bajada de línea: ' + nombre(S, objetivo) + ' será el próximo Candidato a Jefe de Campaña.');
+    evento(S, 'bajada', { by: pid, target: objetivo });
     siguienteRonda(S);
   } else if (p === PODERES.CARPETAZO) {
     g.alive[objetivo] = false;
@@ -576,7 +691,8 @@ function revancha(S, pid) {
 // ---------------------------------------------------------------- Despachador
 
 // Aplica una jugada. `a` es { type, ...datos }. `rnd(n)` da un entero en [0, n).
-function aplicar(S, pid, a, rnd) {
+function aplicar(S, pid, a, rnd, ahora) {
+  if (ahora === undefined) ahora = Date.now();
   exigir(S.pub.players[pid], 'No estás en esta sala.');
   const enJuego = S.pub.status === 'playing';
   switch (a.type) {
@@ -584,10 +700,13 @@ function aplicar(S, pid, a, rnd) {
     case 'kick': return echar(S, pid, a.target);
     case 'start': return empezar(S, pid, rnd);
     case 'rematch': return revancha(S, pid);
+    case 'settings': return ajustes(S, pid, a);
   }
   exigir(enJuego, 'No hay partida en curso.');
   switch (a.type) {
-    case 'nominate': return nominar(S, pid, a.target);
+    case 'nominate': return nominar(S, pid, a.target, ahora);
+    case 'debateNext': return pasarPalabra(S, pid, a, ahora);
+    case 'declare': return declarar(S, pid, a.proposals);
     case 'vote': return votar(S, pid, a.vote, rnd);
     case 'chiefDiscard': return descartarJefe(S, pid, a.index);
     case 'voceroDiscard': return descartarVocero(S, pid, a.index, rnd);
@@ -601,6 +720,7 @@ function aplicar(S, pid, a, rnd) {
 const API = {
   ROLES, BANDOS, CARTAS, PODERES, OPERADORES_POR_CANTIDAD,
   ErrorJuego, crearSala, unirse, limpiarNombre, aplicar, puedeSerVocero, tableroEscandalos, lista,
+  config, DEBATE_OPCIONES,
 };
 
 // En el servidor se usa con require(); en el modo práctica del navegador,

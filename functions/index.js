@@ -99,7 +99,7 @@ exports.ballotage = onCall({ region: 'us-central1', maxInstances: 10 }, async (r
     await transaccion(code, (sala) => {
       const pid = sala.auth && sala.auth[uid];
       if (!pid) throw new engine.ErrorJuego('No estás en esta sala.');
-      engine.aplicar(sala, pid, d.action || {}, rnd);
+      engine.aplicar(sala, pid, d.action || {}, rnd, ahora);
       sala.pub.lastActivity = ahora;
     });
     return { ok: true };

@@ -392,3 +392,43 @@ a.btn.link { text-align: center; }
 .modal.chico { border-radius: 22px; max-width: 420px; }
 .pregunta { font-family: var(--fuente-titulo); font-size: 1.2rem; text-align: center; margin: 4px 0 14px; text-wrap: balance; }
 .btn:focus-visible, .boleta:focus-visible, .carta-btn:focus-visible { outline: 3px solid var(--fucsia); outline-offset: 2px; }
+
+/* Debate y declaraciones */
+.nota.izq { text-align: left; }
+.ajustes h3 { margin-top: 10px; }
+.ajustes .cantidades .btn.cant { font-size: .85rem; }
+.ajustes .dos .btn.cant { margin: 0; }
+.formula.chica > div { min-width: 90px; padding: 6px 8px; }
+.formula.chica .ico-cargo { width: 24px; height: 31px; }
+.orador { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: var(--radio); padding: 10px 12px; margin: 10px 0; }
+.orador.soy-yo { background: var(--amarillo); animation: titilar 1.6s infinite; }
+.orador-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.orador-txt b { font-size: 1.05rem; }
+.reloj { position: relative; width: 64px; height: 64px; flex: none; }
+.reloj svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.reloj circle { fill: none; stroke: var(--papel-2); stroke-width: 5; }
+.reloj circle.arco { stroke: var(--fucsia); stroke-linecap: round; stroke-dasharray: 119.4; transition: stroke-dashoffset .25s linear; }
+.reloj span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--fuente-titulo); font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.oradores { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 6px 0 10px; }
+.oradores li { font-size: .78rem; font-weight: 600; padding: 3px 9px; border-radius: 99px; background: var(--papel-2); }
+.oradores li.hablo { opacity: .45; text-decoration: line-through; }
+.oradores li.ahora { background: var(--fucsia); color: #fff; }
+.accion .dos .btn { margin: 0; }
+.marca.habla { left: -8px; right: auto; top: -8px; bottom: auto; font-size: 1.1rem; }
+.jug.hablando { outline: 3px solid var(--fucsia); }
+.opciones.declarar { grid-template-columns: 1fr; }
+.opciones.declarar .btn { background: #fff; }
+.combo { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fichas { display: inline-flex; gap: 3px; }
+.ficha { display: inline-block; width: 14px; height: 19px; border-radius: 3px; border: 2px solid var(--tinta); }
+.ficha.p { background: var(--turquesa); }
+.ficha.e { background: var(--rojo); }
+.declaraciones { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
+.declaraciones li { background: #fff; border-radius: 10px; padding: 8px 10px; }
+.dichos { font-size: .82rem; margin: 3px 0; }
+
+/* Avisos grandes en fila */
+.aviso-grande { background: var(--papel); color: var(--tinta); border-radius: 22px; padding: 18px; max-width: 360px; box-shadow: var(--sombra); animation: asomar .35s ease-out; }
+.aviso-grande .sello-vetado { width: 160px; height: 64px; }
+.aviso-grande .ico-poder { width: 80px; height: 80px; }
+.capa .tocar { position: absolute; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; }

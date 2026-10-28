@@ -68,8 +68,10 @@ export const REGLAS = `
 <h2>Cómo es una ronda</h2>
 <ol>
   <li>El <b>Candidato a Jefe de Campaña</b> (va rotando) elige a un <b>Vocero</b>.</li>
+  <li><b>Debate con reloj</b>: habla cada jugador en carrera, por turno. Primero el candidato a Jefe, después el candidato a Vocero y después el resto. Cuando se acaba tu tiempo (o tocás "Terminé"), pasa la palabra. Los eliminados no hablan.</li>
   <li>Todos votan con boleta: <b>¡Sí!</b> o <b>¡No!</b>. Las boletas se abren todas juntas.</li>
-  <li>Si gana el Sí (más de la mitad), el Jefe agarra 3 cartas de la <b>Mesa de Entradas</b>, manda 1 a <b>La Trituradora</b> y le pasa 2 al Vocero. El Vocero tritura 1 y <b>publica la otra</b>.</li>
+  <li>Si gana el Sí (más de la mitad), el Jefe agarra 3 cartas de la <b>Mesa de Entradas</b>, manda 1 a <b>La Trituradora</b> y le pasa 2 al Vocero. El Vocero tritura 1 y <b>publica la otra</b>. La Crisis vuelve a cero.</li>
+  <li><b>Declaraciones</b>: el Jefe dice qué 3 cartas le llegaron y el Vocero, qué 2 recibió. Queda en el historial. ¿Dicen la verdad? Eso lo decide la mesa.</li>
   <li>Si empata o gana el No, el cargo pasa al siguiente y sube la <b>Crisis</b>. Con 3 rechazos seguidos hay <b>¡Cacerolazo!</b>: se publica la carta de arriba sin poderes.</li>
 </ol>
 <p>Las cartas trituradas nunca se muestran. <b>Se vale mentir</b> sobre lo que viste. Ese es el juego.</p>
@@ -100,3 +102,32 @@ export const REGLAS = `
   <li>Si te volaron con un Carpetazo, a partir de ahí sos un fantasma: calladito.</li>
 </ul>
 `;
+
+// Lo que "dicen" los bots en su turno del debate. {J} = Jefe, {V} = Vocero.
+export const DICHOS = {
+  formulaJefe: [
+    'Confíen en mí: {V} es de fierro, la conozco de la unidad básica.',
+    'Voten Sí, que esta fórmula gana en primera vuelta.',
+    'Si sale un Escándalo, no fui yo. Lo juro por el choripán.',
+  ],
+  formulaVocero: [
+    'Yo solo quiero publicar Propuestas, nada más.',
+    'A mí me dieron el micrófono y lo voy a cuidar.',
+    'Si me votan, lo primero es el asado de los domingos.',
+  ],
+  aFavor: [
+    'Me cierra la fórmula. Voy con el Sí.',
+    '{J} hasta ahora jugó limpio, le doy una chance.',
+    'Ya estamos con la Crisis encima, hay que aprobar algo.',
+  ],
+  enContra: [
+    'A {V} no le creo nada. Esto huele a operación.',
+    'La última vez que {J} tuvo el cargo salió un Escándalo. ¿Casualidad?',
+    'Yo voto No. Prefiero otra fórmula.',
+  ],
+  dudas: [
+    'Hmm… no sé. Quiero escuchar a los demás.',
+    'Ojo con la zona roja, muchachos.',
+    'Miren el historial, los votos dicen mucho.',
+  ],
+};

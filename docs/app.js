@@ -59,6 +59,8 @@ const st = {
   ultimoVoto: null,
   ultimaCuenta: null,
   ultimaEncuesta: null,
+  desfase: 0, // ms entre este celular y el servidor
+  pasado: null, // último turno de debate que este celular pidió pasar
   ultimoEvento: null,
 };
 
@@ -75,7 +77,7 @@ function toast(msg, tipo = '') {
   setTimeout(() => t.remove(), 3800);
 }
 
-async function pedir(datos) {
+async function pedir(datos, silencioso) {
   if (st.ocupado) return null;
   st.ocupado = true;
   document.body.classList.add('ocupado');
@@ -83,7 +85,7 @@ async function pedir(datos) {
     const r = PRACTICA ? await Practica.pedir(datos) : await llamar(datos);
     return r.data;
   } catch (e) {
-    toast(e.message || 'Algo falló. Probá de nuevo.', 'error');
+    if (!silencioso) toast(e.message || 'Algo falló. Probá de nuevo.', 'error');
     return null;
   } finally {
     st.ocupado = false;
@@ -91,7 +93,8 @@ async function pedir(datos) {
   }
 }
 
-const jugar = (action) => pedir({ op: 'act', code: st.code, action });
+const jugar = (action, silencioso) => pedir({ op: 'act', code: st.code, action }, silencioso);
+const ahoraServidor = () => Date.now() + st.desfase;
 
 // ------------------------------------------------------------------ Conexión a una sala
 
@@ -140,7 +143,8 @@ function escucharSala(base, pid) {
   const offPub = fb.onValue(fb.ref(db, base + 'pub'), (s) => { st.pub = s.val(); dibujar(); }, () => {});
   const offPriv = fb.onValue(fb.ref(db, base + 'priv/' + pid), (s) => { st.priv = s.val() || {}; dibujar(); }, () => {});
   const offPres = fb.onValue(fb.ref(db, base + 'presence'), (s) => { st.presence = s.val() || {}; dibujar(); }, () => {});
-  st.cancelar.push(offCon, offPub, offPriv, offPres, () => fb.set(presRef, false).catch(() => {}));
+  const offDes = fb.onValue(fb.ref(db, '.info/serverTimeOffset'), (s) => { st.desfase = s.val() || 0; });
+  st.cancelar.push(offCon, offPub, offPriv, offPres, offDes, () => fb.set(presRef, false).catch(() => {}));
 }
 
 // ------------------------------------------------------------------ Pantalla de inicio
@@ -160,6 +164,8 @@ function pantallaPractica() {
       <h3>¿Cuántos en la mesa?</h3>
       <div class="cantidades">${[5, 6, 7, 8, 9, 10].map((n) => `<button class="btn cant ${n === 7 ? 'elegida' : ''}" data-act="cantidad" data-n="${n}">${n}</button>`).join('')}</div>
       <p class="nota">Vos + bots que votan, mienten y se hacen los distraídos.</p>
+      <h3>🎙️ Segundos de debate por persona</h3>
+      <div class="cantidades">${[0, 15, 30, 45, 60, 90].map((t) => `<button class="btn cant deb ${t === 30 ? 'elegida' : ''}" data-act="cantidadDeb" data-t="${t}">${t || 'Sin'}</button>`).join('')}</div>
     </div>
     <button class="btn grande primario" data-act="practicar">¡Largar la campaña!</button>
     <button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button>
@@ -257,12 +263,31 @@ function pantallaEspera() {
           ${soyHost && pid !== st.pid ? `<button class="btn chico peligro" data-act="echar" data-pid="${pid}">Sacar</button>` : ''}
         </li>`).join('')}
     </ul>
+    ${panelAjustes(p, soyHost)}
     ${n < 5 ? `<p class="nota">Faltan ${5 - n} para arrancar (mínimo 5, máximo 10).</p>` : ''}
     ${soyHost
       ? `<button class="btn grande primario" data-act="empezar" ${n < 5 || n > 10 ? 'disabled' : ''}>¡Largar la campaña!</button>`
       : `<p class="nota">Esperando que ${esc(nombre(p.host))} largue la campaña…</p>`}
     <button class="btn link" data-act="salir">Salir de la sala</button>
   `;
+}
+
+function panelAjustes(p, soyHost) {
+  const c = Object.assign({ debate: 30, declare: true }, p.settings || {});
+  const tiempos = [0, 15, 30, 45, 60, 90];
+  const txt = (t) => (t ? t + ' s' : 'Sin');
+  return `<div class="tarjeta ajustes">
+    <h3>🎙️ Debate antes de cada votación</h3>
+    <p class="nota izq">Cada jugador en carrera tiene su turno para hablar, con reloj. Primero la fórmula, después el resto.</p>
+    ${soyHost
+      ? `<div class="cantidades">${tiempos.map((t) => `<button class="btn cant ${c.debate === t ? 'elegida' : ''}" data-act="ajuste" data-debate="${t}">${txt(t)}</button>`).join('')}</div>`
+      : `<p><b>${c.debate ? c.debate + ' segundos por persona' : 'Sin debate'}</b></p>`}
+    <h3>🗣️ Declaraciones</h3>
+    <p class="nota izq">Después de publicar, el Jefe y el Vocero cuentan qué cartas les llegaron. Pueden mentir.</p>
+    ${soyHost
+      ? `<div class="dos"><button class="btn cant ${c.declare ? 'elegida' : ''}" data-act="ajuste" data-declare="1">Sí</button><button class="btn cant ${!c.declare ? 'elegida' : ''}" data-act="ajuste" data-declare="0">No</button></div>`
+      : `<p><b>${c.declare ? 'Sí' : 'No'}</b></p>`}
+  </div>`;
 }
 
 // ------------------------------------------------------------------ Juego
@@ -311,14 +336,16 @@ function filaJugadores(g) {
         st.presence[pid] ? '' : 'offline',
       ].join(' ');
       const marcas = [];
-      if (pid === g.candidate && ['nominate', 'vote'].includes(g.phase)) marcas.push(`<span class="marca jefe" title="Candidato a Jefe">${A.credencial(true)}</span>`);
-      if (pid === g.nominee && g.phase === 'vote') marcas.push(`<span class="marca vocero" title="Candidato a Vocero">${A.microfono(true)}</span>`);
-      if (pid === g.chief && g.chief && g.phase !== 'nominate' && g.phase !== 'vote') marcas.push(`<span class="marca jefe" title="Jefe de Campaña">${A.credencial()}</span>`);
-      if (pid === g.vocero && g.vocero && g.phase !== 'nominate' && g.phase !== 'vote') marcas.push(`<span class="marca vocero" title="Vocero">${A.microfono()}</span>`);
+      const habla = g.phase === 'debate' && g.debate ? lista(g.debate.order)[g.debate.idx] : null;
+      if (pid === habla) marcas.push('<span class="marca habla" title="Está hablando">🎙️</span>');
+      if (pid === g.candidate && ['nominate', 'debate', 'vote'].includes(g.phase)) marcas.push(`<span class="marca jefe" title="Candidato a Jefe">${A.credencial(true)}</span>`);
+      if (pid === g.nominee && ['debate', 'vote'].includes(g.phase)) marcas.push(`<span class="marca vocero" title="Candidato a Vocero">${A.microfono(true)}</span>`);
+      if (pid === g.chief && g.chief &&  !['nominate', 'debate', 'vote'].includes(g.phase)) marcas.push(`<span class="marca jefe" title="Jefe de Campaña">${A.credencial()}</span>`);
+      if (pid === g.vocero && g.vocero &&  !['nominate', 'debate', 'vote'].includes(g.phase)) marcas.push(`<span class="marca vocero" title="Vocero">${A.microfono()}</span>`);
       const voto = g.phase === 'vote' && g.alive[pid] ? (g.voted && g.voted[pid] ? '<span class="voto-ok">✔ votó</span>' : '<span class="voto-esp">…</span>') : '';
-      const limite = (pid === g.lastChief || pid === g.lastVocero) && g.phase === 'nominate' ? '<span class="limite">no elegible</span>' : '';
+      const limite = g.phase === 'nominate' && g.alive[pid] && pid !== g.candidate && !puedeSerVocero(g, pid) ? '<span class="limite">no elegible</span>' : '';
       const rev = g.reveal ? `<span class="rol-final ${g.reveal[pid]}">${esc(T.ROLES[g.reveal[pid]].titulo)}</span>` : '';
-      return `<div class="${cls}">
+      return `<div class="${cls}${pid === habla ? ' hablando' : ''}">
         <div class="cara">${A.avatar(nombre(pid))}${marcas.join('')}</div>
         <div class="nom">${esc(nombre(pid))}</div>
         ${voto}${limite}${rev}
@@ -342,6 +369,10 @@ function panelAccion(g) {
         <p>Elegí a quién proponés como <b>Vocero</b>. Después todos votan.</p>
         <div class="opciones">${elegibles.map((p) => `<button class="btn opcion" data-act="nominar" data-pid="${p}">${A.microfono(true)} ${esc(nombre(p))}</button>`).join('')}</div>`;
     }
+    case 'debate':
+      return panelDebate(g);
+    case 'declare':
+      return panelDeclarar(g);
     case 'vote': {
       const titulo = `<h2>¿Votás esta fórmula?</h2>
         <div class="formula">
@@ -390,6 +421,57 @@ function panelAccion(g) {
     default:
       return '';
   }
+}
+
+function relojTexto(fin) {
+  const r = Math.max(0, Math.ceil((fin - ahoraServidor()) / 1000));
+  return r + '';
+}
+
+function panelDebate(g) {
+  const d = g.debate;
+  const orden = lista(d.order);
+  const habla = orden[d.idx];
+  const yo = st.pid;
+  const soyHost = st.pub.host === yo;
+  const dicho = d.say && d.say.idx === d.idx ? d.say.text : '';
+  return `<h2>🎙️ Debate</h2>
+    <div class="formula chica">
+      <div>${A.credencial(true)}<b>${esc(nombre(g.candidate))}</b><small>Jefe</small></div>
+      <div class="y">+</div>
+      <div>${A.microfono(true)}<b>${esc(nombre(g.nominee))}</b><small>Vocero</small></div>
+    </div>
+    <div class="orador ${habla === yo ? 'soy-yo' : ''}">
+      <div class="reloj" style="--total:${d.secs}"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="19"/><circle class="arco" cx="22" cy="22" r="19" data-arco="${d.turnEnd}" style="stroke-dashoffset:${119.4 * (1 - Math.max(0, d.turnEnd - ahoraServidor()) / (d.secs * 1000))}"/></svg><span data-fin="${d.turnEnd}">${relojTexto(d.turnEnd)}</span></div>
+      <div class="orador-txt">
+        ${habla === yo
+          ? '<b>¡Te toca hablar!</b><small>Defendé o atacá la fórmula, contá lo que sabés… o lo que te conviene.</small>'
+          : `<b>Habla ${esc(nombre(habla))}</b><small>${dicho ? '“' + esc(dicho) + '”' : 'Los demás, a escuchar (o a poner cara de póker).'}</small>`}
+      </div>
+    </div>
+    <ol class="oradores">${orden.map((p, i) => `<li class="${i < d.idx ? 'hablo' : i === d.idx ? 'ahora' : ''}">${esc(nombre(p))}</li>`).join('')}</ol>
+    ${habla === yo ? '<button class="btn grande primario" data-act="pasarPalabra">Terminé, paso la palabra</button>' : ''}
+    ${soyHost && habla !== yo ? `<div class="dos"><button class="btn secundario" data-act="pasarPalabra">Siguiente orador</button><button class="btn" data-act="cortarDebate" data-confirm="¿Cortar el debate e ir a votar?">Ir a votar ya</button></div>` : ''}
+    ${!g.alive[yo] ? '<p class="nota">Los fantasmas no hablan.</p>' : ''}`;
+}
+
+function panelDeclarar(g) {
+  const yo = st.pid;
+  const r = lista(g.history)[lista(g.history).length - 1] || {};
+  const c = r.claims || {};
+  const cargo = yo === g.chief ? 'chief' : yo === g.vocero ? 'vocero' : null;
+  const total = cargo === 'chief' ? 3 : 2;
+  const estado = (p, k) => `<li>${esc(nombre(p))}: ${c[k] === undefined ? '<i>pensando qué decir…</i>' : `<b>${A.combo(c[k], k === 'chief' ? 3 : 2)}</b>`}</li>`;
+  let mio = '';
+  if (cargo && c[cargo] === undefined) {
+    const opciones = [];
+    for (let pr = total; pr >= 0; pr--) opciones.push(pr);
+    mio = `<p>${cargo === 'chief' ? '¿Qué te llegó de la Mesa de Entradas (las 3 cartas)?' : '¿Qué te pasó el Jefe (las 2 cartas)?'} <b>Podés mentir.</b></p>
+      <div class="opciones declarar">${opciones.map((pr) => `<button class="btn opcion" data-act="declarar" data-n="${pr}">${A.combo(pr, total)}</button>`).join('')}</div>`;
+  }
+  return `<h2>🗣️ Declaraciones</h2>
+    ${mio || '<p>El Jefe y el Vocero cuentan qué cartas vieron. ¿Les creés?</p>'}
+    <ul class="declaraciones">${estado(g.chief, 'chief')}${estado(g.vocero, 'vocero')}</ul>`;
 }
 
 function puedeSerVocero(g, pid) {
@@ -451,31 +533,27 @@ function tablero(g) {
 // ------------------------------------------------------------------ Animaciones y avisos
 
 function detectarNovedades(g) {
-  // Urna: cuando se abre una votación nueva.
-  const lv = g.lastVote;
-  const claveVoto = lv ? lv.round + '-' + lv.yes + '-' + lv.no : null;
-  if (st.ultimoVoto === null) st.ultimoVoto = claveVoto || '';
-  else if (claveVoto && claveVoto !== st.ultimoVoto) {
-    st.ultimoVoto = claveVoto;
-    animarUrna(lv);
-  }
-  // Publicaciones.
-  const cuenta = g.proposals + '-' + g.scandals;
-  if (st.ultimaCuenta === null) st.ultimaCuenta = cuenta;
-  else if (cuenta !== st.ultimaCuenta) {
-    const [p0, e0] = st.ultimaCuenta.split('-').map(Number);
-    st.ultimaCuenta = cuenta;
-    const caos = g.event && g.event.type === 'chaos';
-    if (g.proposals > p0) mostrarPublicacion('P', g.proposals - 1, caos);
-    else if (g.scandals > e0) mostrarPublicacion('E', g.scandals - 1, caos);
-  }
-  // Eventos sueltos (veto, carpetazo).
-  const ev = g.event && g.event.id;
-  if (st.ultimoEvento === null) st.ultimoEvento = ev;
-  else if (ev !== st.ultimoEvento) {
-    st.ultimoEvento = ev;
-    if (g.event.type === 'veto') toast('¡VETADO! Las dos cartas fueron a La Trituradora.');
-    if (g.event.type === 'carpetazo') toast('¡Carpetazo a ' + nombre(g.event.target) + '!', 'error');
+  // Todo lo que pasó desde la última vez, en orden, sin que nada se pise.
+  const ultimo = g.eventId || 0;
+  if (st.ultimoEvento === null || st.ultimoEvento > ultimo) st.ultimoEvento = ultimo;
+  for (const ev of lista(g.events)) {
+    if (ev.id <= st.ultimoEvento) continue;
+    st.ultimoEvento = ev.id;
+    switch (ev.type) {
+      case 'vote': if (g.lastVote) animarUrna(g.lastVote); break;
+      case 'publish': mostrarPublicacion(ev.card, (ev.n || 1) - 1, false); break;
+      case 'chaos': mostrarPublicacion(ev.card, (ev.n || 1) - 1, true); break;
+      case 'veto':
+        capa(`<div class="aviso-grande">${A.selloVetado()}<h2>¡VETADO!</h2><p>Las dos cartas fueron a La Trituradora y sube la Crisis.</p></div>`, 'aviso-capa', 3500);
+        break;
+      case 'vetoDenied': toast('El Jefe rechazó el Veto: el Vocero tiene que publicar.'); break;
+      case 'carpetazo':
+        capa(`<div class="aviso-grande">${A.iconoPoder('carpetazo')}<h2>¡Carpetazo!</h2><p><b>${esc(nombre(ev.target))}</b> quedó afuera de la campaña. Nadie sabe qué era.</p></div>`, 'aviso-capa', 4000);
+        break;
+      case 'encuesta': toast(nombre(ev.by) + ' encuestó a ' + nombre(ev.target) + '.'); break;
+      case 'bajada': toast('Bajada de línea: el próximo candidato es ' + nombre(ev.target) + '.'); break;
+      case 'carpeta': toast(nombre(ev.by) + ' ya miró la carpeta.'); break;
+    }
   }
   // Resultado de encuesta (solo lo ve quien encuestó).
   const enc = st.priv && st.priv.lastSurvey;
@@ -486,16 +564,33 @@ function detectarNovedades(g) {
   }
 }
 
+// Las animaciones grandes van en fila: una termina y arranca la otra.
+const cola = [];
+let capaAbierta = false;
 function capa(html, clase, ms) {
-  const c = document.createElement('div');
-  c.className = 'capa ' + clase;
-  c.innerHTML = html;
-  document.body.appendChild(c);
-  const cerrar = () => { c.classList.add('fuera'); setTimeout(() => c.remove(), 400); };
-  c.addEventListener('click', cerrar);
-  if (ms) setTimeout(cerrar, ms);
-  return c;
+  cola.push({ html, clase, ms });
+  if (!capaAbierta) siguienteCapa();
 }
+function siguienteCapa() {
+  const item = cola.shift();
+  if (!item) { capaAbierta = false; return; }
+  capaAbierta = true;
+  const c = document.createElement('div');
+  c.className = 'capa ' + item.clase;
+  c.innerHTML = item.html + '<p class="nota tocar">Tocá para seguir</p>';
+  document.body.appendChild(c);
+  let cerrado = false;
+  const cerrar = () => {
+    if (cerrado) return;
+    cerrado = true;
+    c.classList.add('fuera');
+    setTimeout(() => { c.remove(); siguienteCapa(); }, 350);
+  };
+  c.addEventListener('click', cerrar);
+  if (item.ms) setTimeout(cerrar, item.ms);
+}
+// Para el modo práctica: los bots esperan mientras mirás una animación.
+window.ballotageOcupado = () => capaAbierta || !!document.querySelector('.confirmar');
 
 function animarUrna(lv) {
   const votos = lv.votes || {};
@@ -509,9 +604,8 @@ function animarUrna(lv) {
         <span>${esc(nombre(pid))}</span>
       </div>`).join('')}
     </div>
-    <p class="nota">Tocá para cerrar</p>
   </div>`;
-  capa(html, 'urna-capa', 7000);
+  capa(html, 'urna-capa', 5500);
 }
 
 function mostrarPublicacion(tipo, idx, caos) {
@@ -520,9 +614,7 @@ function mostrarPublicacion(tipo, idx, caos) {
     ${tipo === 'P' ? A.volante(T.PROPUESTAS[idx % T.PROPUESTAS.length], idx, true) : A.titular(T.ESCANDALOS[idx % T.ESCANDALOS.length], true)}
     <p>${tipo === 'P' ? '¡Nueva Propuesta publicada!' : '¡Nuevo Escándalo en la tapa!'}</p>
   </div>`;
-  // Si la urna está abierta, esperamos a que termine.
-  const demora = document.querySelector('.urna-capa') ? 4200 : 0;
-  setTimeout(() => capa(html, 'pub-capa', 3500), demora);
+  capa(html, 'pub-capa', 4000);
 }
 
 // ------------------------------------------------------------------ Ventanas (modales)
@@ -625,6 +717,7 @@ function modalHistorial(g) {
     return `<div class="ronda">
       <div class="r-cab"><b>Ronda ${r.round}</b> ${estado} ${pub} ${extra}</div>
       <div>🪪 Jefe: <b>${esc(nombre(r.candidate))}</b> · 🎤 Vocero: <b>${esc(nombre(r.nominee))}</b></div>
+      ${r.claims && (r.claims.chief !== undefined || r.claims.vocero !== undefined) ? `<div class="dichos">🗣️ Jefe dijo: ${r.claims.chief !== undefined ? A.combo(r.claims.chief, 3) : '—'} · Vocero dijo: ${r.claims.vocero !== undefined ? A.combo(r.claims.vocero, 2) : '—'}</div>` : ''}
       ${Object.keys(votos).length ? `<div class="votos">${Object.keys(votos).map((p) => `<span class="${votos[p] ? 'si' : 'no'}">${esc(nombre(p))} ${votos[p] ? 'Sí' : 'No'}</span>`).join('')}</div>` : ''}
     </div>`;
   }).join('')}</div>`;
@@ -669,19 +762,23 @@ document.addEventListener('click', async (ev) => {
 
   switch (act) {
     case 'cantidad':
-      document.querySelectorAll('.cant').forEach((x) => x.classList.toggle('elegida', x === b));
+      document.querySelectorAll('.cant:not(.deb)').forEach((x) => x.classList.toggle('elegida', x === b));
+      break;
+    case 'cantidadDeb':
+      document.querySelectorAll('.cant.deb').forEach((x) => x.classList.toggle('elegida', x === b));
       break;
     case 'practicar': {
       const name = apodo();
       if (!name) return;
-      const n = Number((document.querySelector('.cant.elegida') || {}).dataset?.n || 7);
+      const n = Number((document.querySelector('.cant.elegida:not(.deb)') || {}).dataset?.n || 7);
+      const debate = Number((document.querySelector('.cant.deb.elegida') || {}).dataset?.t ?? 30);
       Object.assign(st, { code: 'BOTS', pid: 'p1' });
       Practica.iniciar(name, n, (e) => {
         st.pub = e.pub;
         st.priv = e.priv;
         st.presence = e.presence;
         dibujar();
-      });
+      }, { debate, declare: true });
       break;
     }
     case 'crear': {
@@ -744,6 +841,16 @@ document.addEventListener('click', async (ev) => {
       break;
     case 'veto': jugar({ type: 'vetoReply', accept: d.v === '1' }); break;
     case 'poder': jugar({ type: 'power', target: d.pid || null }); break;
+    case 'pasarPalabra': {
+      const db = st.pub.game.debate;
+      if (db) jugar({ type: 'debateNext', idx: db.idx });
+      break;
+    }
+    case 'cortarDebate': jugar({ type: 'debateNext', all: true }); break;
+    case 'declarar': jugar({ type: 'declare', proposals: Number(d.n) }); break;
+    case 'ajuste':
+      jugar(Object.assign({ type: 'settings' }, d.debate !== undefined ? { debate: Number(d.debate) } : { declare: d.declare === '1' }));
+      break;
     case 'revancha': jugar({ type: 'rematch' }); break;
     case 'reglas':
       st.modal = 'reglas';
@@ -765,6 +872,33 @@ document.addEventListener('click', async (ev) => {
       break;
   }
 });
+
+// Reloj del debate: actualiza los números y, cuando se acaba el tiempo,
+// el celular del orador (o el del anfitrión) pasa la palabra.
+setInterval(() => {
+  document.querySelectorAll('[data-fin]').forEach((el) => { el.textContent = relojTexto(Number(el.dataset.fin)); });
+  document.querySelectorAll('[data-arco]').forEach((el) => {
+    const d = st.pub && st.pub.game && st.pub.game.debate;
+    if (!d) return;
+    const resto = Math.max(0, Number(el.dataset.arco) - ahoraServidor()) / (d.secs * 1000);
+    el.style.strokeDashoffset = String(119.4 * (1 - resto));
+  });
+  const g = st.pub && st.pub.game;
+  if (!g || g.phase !== 'debate' || !g.debate) return;
+  const d = g.debate;
+  const habla = lista(d.order)[d.idx];
+  const clave = g.round + '-' + d.idx;
+  if (habla === st.pid && st.avisoHabla !== clave) {
+    st.avisoHabla = clave;
+    if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
+  }
+  const responsable = habla === st.pid || st.pub.host === st.pid || !st.presence[habla];
+  const reintento = !st.pasado || st.pasado.clave !== clave || Date.now() - st.pasado.t > 2500;
+  if (responsable && ahoraServidor() >= d.turnEnd && reintento) {
+    st.pasado = { clave, t: Date.now() };
+    jugar({ type: 'debateNext', idx: d.idx }, true);
+  }
+}, 250);
 
 // Al terminar una votación nueva, se olvida el voto local.
 setInterval(() => {
