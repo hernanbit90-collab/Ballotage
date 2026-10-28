@@ -121,7 +121,19 @@ export const firebaseConfig = {
 3. **Branch**: elegí `main` y la carpeta **`/docs`** → **Save**.
 4. Esperá 1 o 2 minutos y recargá. Arriba aparece: *"Your site is live at https://hernanbit90-collab.github.io/Ballotage/"*.
 
-**¡Ese es el link para compartir!** Cada uno lo abre en su celular, pone su apodo, y uno crea la sala. El que la crea toca **"Compartir link"** y lo manda por WhatsApp: el link ya lleva el código de la sala.
+**¡Ese es el link del juego!**
+
+## Cómo se arma una partida (el administrador)
+
+1. El administrador abre el link, pone su apodo y toca **"Crear sala nueva"**. Le aparece un **código de 4 letras**.
+2. Toca **"💬 Invitar por WhatsApp"**, elige el grupo o la persona y manda. El mensaje lleva el link (con el código ya cargado) y el código escrito.
+   - O toca **"🔗 Copiar link"** y lo pega donde quiera.
+   - También puede dictar el código: los invitados abren el link del juego, ponen el código y su apodo.
+3. Cada invitado abre el link, pone su **apodo** y toca **"Entrar"**. Van apareciendo en la lista (punto verde = conectado).
+4. El administrador elige los **segundos de debate**, el **tiempo para votar** y si hay **declaraciones**. Si alguien se coló, lo puede sacar.
+5. Con 5 a 10 personas adentro, toca **"¡Largar la campaña!"**. A cada uno le llega su rol secreto en el celular.
+
+Consejo: jueguen todos juntos en una llamada o en la misma mesa, porque el debate es hablado.
 
 ---
 

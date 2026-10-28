@@ -443,3 +443,8 @@ a.btn.link { text-align: center; }
 .reloj-voto.apurate { background: var(--amarillo); }
 .bol .frente small { display: block; font-family: var(--fuente); font-size: .55rem; }
 .bol .frente { flex-direction: column; }
+
+/* Invitar */
+.invitar { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 6px 0; }
+.btn.whatsapp { background: #25d366; color: #0b3b1f; text-decoration: none; }
+.codigo-sala small { display: block; margin-top: 4px; font-size: .78rem; }

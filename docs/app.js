@@ -242,6 +242,11 @@ function nombre(pid) {
 
 // ------------------------------------------------------------------ Sala de espera
 
+function invitacion(link) {
+  return '🗳️ ¡Sumate a mi campaña en BALLOTAGE! Hay un Topo infiltrado y nadie sabe quién es.\n\n' +
+    'Entrá desde el celu: ' + link + '\nCódigo de sala: ' + st.code;
+}
+
 function pantallaEspera() {
   const p = st.pub;
   const pids = Object.keys(p.players).sort((a, b) => p.players[a].joinedAt - p.players[b].joinedAt);
@@ -254,7 +259,11 @@ function pantallaEspera() {
     <div class="codigo-sala">
       <span>Código de sala</span>
       <strong>${st.code}</strong>
-      ${PRACTICA ? '<small>Partida de práctica contra bots</small>' : `<button class="btn chico" data-act="compartir" data-link="${esc(link)}">📲 Compartir link</button>`}
+      ${PRACTICA ? '<small>Partida de práctica contra bots</small>' : `<div class="invitar">
+        <a class="btn chico whatsapp" href="https://wa.me/?text=${encodeURIComponent(invitacion(link))}" target="_blank" rel="noopener">💬 Invitar por WhatsApp</a>
+        <button class="btn chico" data-act="compartir" data-link="${esc(link)}">🔗 Copiar link</button>
+      </div>
+      <small>Los invitados abren el link, ponen su apodo y tocan <b>Entrar</b>. También pueden entrar escribiendo el código.</small>`}
     </div>
     <h2>Militantes en el búnker <small>${n}/10</small></h2>
     <ul class="lista-jugadores">
@@ -828,10 +837,12 @@ document.addEventListener('click', async (ev) => {
     }
     case 'compartir': {
       const link = d.link;
-      if (navigator.share) {
-        navigator.share({ title: 'BALLOTAGE', text: 'Sumate a mi campaña en BALLOTAGE. Código: ' + st.code, url: link }).catch(() => {});
-      } else {
-        try { await navigator.clipboard.writeText(link); toast('¡Link copiado!'); } catch { prompt('Copiá este link:', link); }
+      try {
+        await navigator.clipboard.writeText(invitacion(link));
+        toast('¡Invitación copiada! Pegala en el grupo.');
+      } catch {
+        if (navigator.share) navigator.share({ title: 'BALLOTAGE', text: invitacion(link) }).catch(() => {});
+        else toast('Copiá el link de la barra del navegador y agregale ?sala=' + st.code);
       }
       break;
     }
