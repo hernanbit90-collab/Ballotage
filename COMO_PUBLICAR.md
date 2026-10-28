@@ -1,6 +1,52 @@
 # Cómo publicar BALLOTAGE (para gente que no programa)
 
-## ⚡ Camino rápido (recomendado): instalador automático
+Hay dos formas. Para empezar a probar con amigos, usá la **A (gratis, sin tarjeta)**.
+
+| | A. Gratis | B. Seguridad total |
+|---|---|---|
+| Costo | $0, sin tarjeta | $0 con amigos, pero pide tarjeta (plan Blaze) |
+| Árbitro (reparte roles, mezcla) | Corre en el celular del **anfitrión** | Corre en un servidor de Google |
+| ¿Alguien puede espiar? | Los jugadores no. El anfitrión, solo si sabe programar | Nadie |
+| Requisito | El anfitrión deja el juego abierto mientras juegan | Ninguno |
+
+---
+
+# A. Camino gratis (sin tarjeta) — unos 15 minutos
+
+### A1. Crear el proyecto
+1. Entrá a <https://console.firebase.google.com> con tu cuenta de Google y tocá **Crear un proyecto**.
+2. Nombre: `ballotage`. Desactivá Google Analytics. Tocá **Crear proyecto**. (Queda en el plan **Spark**, que es gratis: no pide tarjeta.)
+
+### A2. Ingreso con mail
+1. Menú izquierdo → **Compilación / Build** → **Authentication** → **Comenzar**.
+2. **Método de acceso** → **Correo electrónico/contraseña** → activá el primer interruptor → **Guardar**.
+3. **Agregar proveedor nuevo** → **Google** → activalo, elegí tu mail de asistencia → **Guardar**.
+4. Pestaña **Configuración** → **Dominios autorizados** → **Agregar dominio** → `hernanbit90-collab.github.io`.
+
+### A3. Base de datos y reglas de seguridad
+1. Menú izquierdo → **Compilación / Build** → **Realtime Database** → **Crear base de datos** → ubicación **Estados Unidos (us-central1)** → **Comenzar en modo bloqueado** → **Habilitar**.
+2. Pestaña **Reglas**: borrá todo lo que hay y pegá **el contenido completo** del archivo [`database.rules.gratis.json`](database.rules.gratis.json) (abrilo en GitHub y tocá el ícono de copiar). Tocá **Publicar**.
+
+### A4. Datos de la app web
+1. Engranaje ⚙️ → **Configuración del proyecto** → abajo, ícono **`</>`** (Web).
+2. Apodo `ballotage`, **sin** Firebase Hosting → **Registrar app**.
+3. Copiá el bloque `const firebaseConfig = { ... }` y **pegáselo a Claude** (o pegalo vos en `docs/config.js` desde GitHub, reemplazando los `PEGAR_ACA`).
+
+> Si el bloque no trae `databaseURL`, copiala de Realtime Database: es la dirección de arriba (termina en `firebaseio.com` o `firebasedatabase.app`).
+
+### A5. Publicar con GitHub Pages
+1. En GitHub → **Settings** → **Pages** → Source: **Deploy from a branch** → Branch **main**, carpeta **/docs** → **Save**. (El repositorio tiene que ser público.)
+2. En 1 o 2 minutos el juego queda en **<https://hernanbit90-collab.github.io/Ballotage/>**.
+
+¡Listo! Importante: en el modo gratis, **el celular del anfitrión es el árbitro**. Tiene que dejar el juego abierto mientras juegan (si lo cierra, la partida se pausa y sigue cuando vuelve).
+
+---
+
+# B. Camino con seguridad total (plan Blaze, pide tarjeta)
+
+Cuando quieras que nadie, ni el anfitrión, pueda espiar.
+
+## Instalador automático
 
 Son 4 cosas y tardás unos 10 minutos (más la espera):
 
@@ -20,7 +66,7 @@ Si algo falla, el mensaje dice qué hacer; volvé a correr `bash instalar.sh` y 
 
 ---
 
-## Camino manual (si preferís hacerlo a mano)
+## Camino manual del plan Blaze (si preferís hacerlo a mano)
 
 Lo hacés una sola vez. Tardás unos 30 minutos. Necesitás una cuenta de Google y una de GitHub.
 
@@ -119,6 +165,8 @@ npx firebase-tools@13 deploy --only functions,database --project TU-ID-DE-PROYEC
 > Si el código todavía no está en la rama `main`, agregá `-b claude/nice-bardeen-0kefgn` al final del `git clone`.
 
 ## Paso 5 – Pegar tus datos y publicar con GitHub Pages
+
+> En el plan Blaze, además de pegar los datos, en `docs/config.js` cambiá `export const MODO = 'gratis';` por `export const MODO = 'servidor';`.
 
 **Pegar los datos de Firebase** (elegí una de las dos opciones):
 

@@ -459,3 +459,4 @@ a.btn.link { text-align: center; }
 .sesion { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: .85rem; flex-wrap: wrap; }
 .sesion span { font-weight: 600; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
 .sesion .btn.link { margin: 0; font-size: .85rem; }
+.aviso.pausa { background: var(--amarillo); }

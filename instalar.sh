@@ -130,6 +130,7 @@ paso "Instalando el árbitro"
 $FB hosting:sites:create "$PROYECTO" --project "$PROYECTO" >/dev/null 2>&1 || true
 
 paso "Subiendo el árbitro, las reglas y la página (la primera vez tarda unos 5 minutos)"
+sed -i "s/export const MODO = 'gratis';/export const MODO = 'servidor';/" docs/config.js
 $FB deploy --only functions,database,hosting --project "$PROYECTO" --force \
   || fallar "Falló la subida. Volvé a correr: bash instalar.sh (muchas veces la primera vez falla porque Google todavía está activando cosas)."
 

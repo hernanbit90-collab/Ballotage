@@ -1,10 +1,13 @@
 // BALLOTAGE — lo que corre en cada celular.
 // Solo muestra lo que el árbitro le deja ver y le manda pedidos.
 
-import { firebaseConfig, REGION } from './config.js';
+import * as CFG from './config.js';
 import * as T from './textos.js';
 import * as A from './arte.js';
 import * as Practica from './practica.js';
+import * as Anfitrion from './anfitrion.js';
+
+const { firebaseConfig, REGION } = CFG;
 
 // ------------------------------------------------------------------ Firebase
 
@@ -18,23 +21,30 @@ const configurado = EMU || !String(cfg.apiKey).includes('PEGAR_ACA');
 // Modo práctica: vos contra bots, todo en el navegador. Es el modo que se
 // usa mientras Firebase no esté configurado, o con ?practica en el link.
 const PRACTICA = params.has('practica') || !configurado;
+// Modo gratis: el árbitro corre en el celular del anfitrión (plan gratuito
+// de Firebase, sin tarjeta). Modo servidor: el árbitro corre en Cloud Functions.
+const GRATIS = EMU ? params.has('gratis') : (CFG.MODO || 'gratis') !== 'servidor';
 
 let auth, db, llamar;
 const fb = {};
 if (!PRACTICA) {
-  const [app, au, da, fu] = await Promise.all(
-    ['firebase-app.js', 'firebase-auth.js', 'firebase-database.js', 'firebase-functions.js'].map((f) => import(FB + f)));
+  const archivos = ['firebase-app.js', 'firebase-auth.js', 'firebase-database.js'].concat(GRATIS ? [] : ['firebase-functions.js']);
+  const [app, au, da, fu] = await Promise.all(archivos.map((f) => import(FB + f)));
   Object.assign(fb, au, da, { authMod: au });
   const fapp = app.initializeApp(cfg);
   auth = au.getAuth(fapp);
   db = da.getDatabase(fapp);
-  const fns = fu.getFunctions(fapp, REGION);
   if (EMU) {
     au.connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
     da.connectDatabaseEmulator(db, '127.0.0.1', 9000);
-    fu.connectFunctionsEmulator(fns, '127.0.0.1', 5001);
   }
-  llamar = fu.httpsCallable(fns, 'ballotage');
+  if (GRATIS) {
+    Anfitrion.iniciar({ fb: da, db, ahora: () => Date.now() + st.desfase });
+  } else {
+    const fns = fu.getFunctions(fapp, REGION);
+    if (EMU) fu.connectFunctionsEmulator(fns, '127.0.0.1', 5001);
+    llamar = fu.httpsCallable(fns, 'ballotage');
+  }
 }
 
 // ------------------------------------------------------------------ Estado local
@@ -82,7 +92,9 @@ async function pedir(datos, silencioso) {
   st.ocupado = true;
   document.body.classList.add('ocupado');
   try {
-    const r = PRACTICA ? await Practica.pedir(datos) : await llamar(datos);
+    const r = PRACTICA ? await Practica.pedir(datos)
+      : GRATIS ? await Anfitrion.pedir(datos, auth.currentUser && auth.currentUser.email)
+        : await llamar(datos);
     return r.data;
   } catch (e) {
     if (!silencioso) toast(e.message || 'Algo falló. Probá de nuevo.', 'error');
@@ -100,6 +112,7 @@ const ahoraServidor = () => Date.now() + st.desfase;
 
 function salirDeSala(msg) {
   if (PRACTICA) Practica.detener();
+  if (GRATIS && !PRACTICA) Anfitrion.detener();
   st.cancelar.forEach((f) => f());
   st.cancelar = [];
   Object.assign(st, { code: null, pid: null, pub: null, priv: null, presence: {}, modal: null, rolVisto: false, verRol: false,
@@ -133,6 +146,8 @@ function entrarASala(code) {
 function escucharSala(base, pid) {
   // Las escuchas viejas (si cambió el pid) se reemplazan.
   st.cancelar.splice(1).forEach((f) => f());
+  // En modo gratis, si este celular creó la sala, retoma el papel de árbitro.
+  if (GRATIS) Anfitrion.asegurarArbitro(st.code).catch((e) => console.error(e));
   const presRef = fb.ref(db, base + 'presence/' + pid);
   const offCon = fb.onValue(fb.ref(db, '.info/connected'), (s) => {
     if (s.val() === true) {
@@ -352,6 +367,8 @@ function pantallaEspera() {
       </div>
       <small>Los invitados abren el link, ponen su apodo y tocan <b>Entrar</b>. También pueden entrar escribiendo el código.</small>`}
     </div>
+    ${avisoAnfitrion()}
+    ${GRATIS && soyHost ? '<p class="nota">📱 Sos el anfitrión: <b>dejá el juego abierto en tu celular</b> mientras juegan (tu celular hace de árbitro).</p>' : ''}
     <h2>Militantes en el búnker <small>${n}/10</small></h2>
     <ul class="lista-jugadores">
       ${pids.map((pid) => `
@@ -412,6 +429,7 @@ function pantallaJuego() {
       <button class="btn icono" data-act="modal" data-m="historial" aria-label="Historial">🗂️</button>
       <button class="btn icono" data-act="modal" data-m="menu" aria-label="Menú">☰</button>
     </header>
+    ${avisoAnfitrion()}
     ${!vivo && !terminado ? `<div class="aviso fantasma">👻 Te hicieron un Carpetazo. Ya no votás ni hablás: mirá en silencio.</div>` : ''}
     ${terminado ? pantallaFinal(g) : ''}
     <section class="accion">${terminado ? '' : g.phase === 'ended' ? esperando('Contando los votos del escrutinio…') : panelAccion(g)}</section>
@@ -428,6 +446,11 @@ function pantallaJuego() {
     st.modal = 'rol';
     dibujarModal();
   }
+}
+
+function avisoAnfitrion() {
+  if (!GRATIS || PRACTICA || !st.pub || st.pub.host === st.pid || st.presence[st.pub.host]) return '';
+  return `<div class="aviso pausa">⏸️ <b>${esc(nombre(st.pub.host))}</b> (anfitrión) cerró el juego. La partida sigue cuando lo vuelva a abrir.</div>`;
 }
 
 function filaJugadores(g) {
@@ -1067,6 +1090,7 @@ if (PRACTICA) {
     }
     if (st.uid === u.uid) return;
     st.uid = u.uid;
+    if (GRATIS) Anfitrion.usuario(u.uid);
     const salaUrl = (params.get('sala') || '').toUpperCase();
     const salaGuardada = guardado.get('code');
     if (salaGuardada && (!salaUrl || salaUrl === salaGuardada)) {

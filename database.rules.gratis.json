@@ -1,0 +1,50 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$code": {
+        ".read": "auth != null && data.child('hostUid').val() === auth.uid",
+        ".write": "auth != null && data.child('hostUid').val() === auth.uid",
+        "hostUid": {
+          ".read": "auth != null",
+          ".write": "auth != null && !data.exists() && newData.val() === auth.uid && $code.matches(/^[A-Z]{4}$/)"
+        },
+        "auth": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid"
+          }
+        },
+        "pub": {
+          ".read": "auth != null && data.parent().child('auth').child(auth.uid).exists()"
+        },
+        "priv": {
+          "$pid": {
+            ".read": "auth != null && data.parent().parent().child('auth').child(auth.uid).val() === $pid"
+          }
+        },
+        "presence": {
+          ".read": "auth != null && data.parent().child('auth').child(auth.uid).exists()",
+          "$pid": {
+            ".write": "auth != null && data.parent().parent().child('auth').child(auth.uid).val() === $pid",
+            ".validate": "newData.isBoolean()"
+          }
+        },
+        "inbox": {
+          "$id": {
+            ".write": "auth != null && !data.exists() && data.parent().parent().child('hostUid').exists() && newData.child('uid').val() === auth.uid && newData.child('email').val() === auth.token.email",
+            ".validate": "newData.hasChildren(['uid', 'op'])"
+          }
+        },
+        "replies": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            "$id": {
+              ".write": "auth != null && auth.uid === $uid && !newData.exists()"
+            }
+          }
+        }
+      }
+    }
+  }
+}
