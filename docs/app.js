@@ -24,7 +24,7 @@ const fb = {};
 if (!PRACTICA) {
   const [app, au, da, fu] = await Promise.all(
     ['firebase-app.js', 'firebase-auth.js', 'firebase-database.js', 'firebase-functions.js'].map((f) => import(FB + f)));
-  Object.assign(fb, au, da);
+  Object.assign(fb, au, da, { authMod: au });
   const fapp = app.initializeApp(cfg);
   auth = au.getAuth(fapp);
   db = da.getDatabase(fapp);
@@ -176,8 +176,101 @@ function pantallaPractica() {
   `;
 }
 
+// ------------------------------------------------------------------ Ingreso con mail
+
+const ERRORES_AUTH = {
+  'auth/invalid-email': 'Ese mail no parece válido.',
+  'auth/missing-password': 'Poné una contraseña.',
+  'auth/weak-password': 'La contraseña tiene que tener al menos 6 caracteres.',
+  'auth/email-already-in-use': 'Ya hay una cuenta con ese mail. Tocá "Ya tengo cuenta" y entrá.',
+  'auth/invalid-credential': 'Mail o contraseña incorrectos.',
+  'auth/wrong-password': 'Mail o contraseña incorrectos.',
+  'auth/user-not-found': 'No hay ninguna cuenta con ese mail. Creá una.',
+  'auth/too-many-requests': 'Demasiados intentos. Esperá un ratito y probá de nuevo.',
+  'auth/network-request-failed': 'No hay conexión. Revisá internet y probá de nuevo.',
+  'auth/popup-closed-by-user': 'Cerraste la ventana de Google antes de terminar.',
+  'auth/unauthorized-domain': 'Este sitio no está autorizado en Firebase (ver COMO_PUBLICAR.md, paso 3).',
+  'auth/operation-not-allowed': 'Este tipo de ingreso no está activado en Firebase (ver COMO_PUBLICAR.md, paso 3).',
+};
+const errorAuth = (e) => ERRORES_AUTH[e && e.code] || 'No se pudo entrar. Probá de nuevo.';
+
+function pantallaLogin(modo = 'entrar') {
+  $app.className = 'inicio';
+  const crear = modo === 'crear';
+  const olvido = modo === 'olvido';
+  $app.innerHTML = `
+    <div class="portada">
+      ${A.logo()}
+      <p class="bajada">El juego donde la campaña se pudre desde adentro.</p>
+    </div>
+    <form class="tarjeta login" id="form-login" novalidate>
+      <h3>${crear ? 'Crear tu cuenta' : olvido ? 'Recuperar la contraseña' : 'Entrá con tu mail'}</h3>
+      ${crear ? `<label class="campo">Tu apodo en el juego
+        <input id="nombre" maxlength="16" autocomplete="nickname" placeholder="Ej: La Tana" value="${esc(guardado.get('name') || '')}">
+      </label>` : ''}
+      <label class="campo">Mail
+        <input id="email" type="email" autocomplete="email" inputmode="email" placeholder="vos@ejemplo.com" value="${esc(guardado.get('email') || '')}">
+      </label>
+      ${olvido ? '' : `<label class="campo">Contraseña
+        <input id="clave" type="password" autocomplete="${crear ? 'new-password' : 'current-password'}" placeholder="${crear ? 'Mínimo 6 caracteres' : 'Tu contraseña'}">
+      </label>`}
+      <button class="btn grande primario" type="submit">${crear ? 'Crear cuenta y entrar' : olvido ? 'Mandarme el mail' : 'Entrar'}</button>
+      ${olvido ? '' : '<button class="btn grande google" type="button" data-act="google"><span class="g">G</span> Entrar con Google</button>'}
+      <div class="login-links">
+        ${crear ? '<button class="btn link" type="button" data-act="login" data-m="entrar">Ya tengo cuenta</button>'
+          : '<button class="btn link" type="button" data-act="login" data-m="crear">Soy nuevo: crear cuenta</button>'}
+        ${modo === 'entrar' ? '<button class="btn link" type="button" data-act="login" data-m="olvido">Me olvidé la contraseña</button>' : ''}
+        ${olvido ? '<button class="btn link" type="button" data-act="login" data-m="entrar">Volver</button>' : ''}
+      </div>
+    </form>
+    <button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button>
+    <a class="btn link" href="?practica">🤖 Practicar contra bots (sin cuenta)</a>
+  `;
+  document.getElementById('form-login').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const au = fb.authMod;
+    const email = document.getElementById('email').value.trim();
+    const clave = (document.getElementById('clave') || {}).value || '';
+    guardado.set('email', email);
+    document.body.classList.add('ocupado');
+    try {
+      if (olvido) {
+        await au.sendPasswordResetEmail(auth, email);
+        toast('Listo: te mandamos un mail para elegir una contraseña nueva (mirá también en spam).');
+        pantallaLogin('entrar');
+      } else if (crear) {
+        const nombre = document.getElementById('nombre').value.trim();
+        if (!nombre) { toast('Poné tu apodo.', 'error'); return; }
+        guardado.set('name', nombre);
+        const cred = await au.createUserWithEmailAndPassword(auth, email, clave);
+        await au.updateProfile(cred.user, { displayName: nombre });
+      } else {
+        await au.signInWithEmailAndPassword(auth, email, clave);
+      }
+    } catch (e) {
+      toast(errorAuth(e), 'error');
+    } finally {
+      document.body.classList.remove('ocupado');
+    }
+  });
+}
+
+async function entrarConGoogle() {
+  const au = fb.authMod;
+  const prov = new au.GoogleAuthProvider();
+  try {
+    await au.signInWithPopup(auth, prov);
+  } catch (e) {
+    if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) {
+      return au.signInWithRedirect(auth, prov);
+    }
+    toast(errorAuth(e), 'error');
+  }
+}
+
 function pantallaInicio() {
   if (PRACTICA) return pantallaPractica();
+  const yo = auth.currentUser;
   const codigo = (params.get('sala') || '').toUpperCase();
   $app.className = 'inicio';
   $app.innerHTML = `
@@ -185,21 +278,15 @@ function pantallaInicio() {
       ${A.logo()}
       <p class="bajada">El juego donde la campaña se pudre desde adentro.</p>
     </div>
-    ${configurado ? '' : `<div class="aviso">⚠️ Falta configurar Firebase: abrí <b>docs/config.js</b> y pegá tus datos (ver <b>COMO_PUBLICAR.md</b>).</div>`}
+    <div class="sesion">👤 <span>${esc(yo && (yo.email || yo.displayName) || '')}</span> <button class="btn link" data-act="cerrarSesion">Cerrar sesión</button></div>
     <label class="campo">Tu apodo
-      <input id="apodo" maxlength="16" autocomplete="nickname" placeholder="Ej: La Tana" value="${esc(guardado.get('name') || '')}">
+      <input id="apodo" maxlength="16" autocomplete="nickname" placeholder="Ej: La Tana" value="${esc(guardado.get('name') || (yo && yo.displayName) || '')}">
     </label>
     <div class="tarjeta">
       <h3>Unirme a una sala</h3>
       <label class="campo">Código de sala
         <input id="codigo" maxlength="4" autocapitalize="characters" placeholder="ABCD" value="${esc(codigo)}">
       </label>
-      <details class="volver">
-        <summary>¿Volvés desde otro celular?</summary>
-        <label class="campo">Clave de regreso
-          <input id="pin" inputmode="numeric" maxlength="4" placeholder="1234">
-        </label>
-      </details>
       <button class="btn grande primario" data-act="unirme">Entrar</button>
     </div>
     <div class="o">o</div>
@@ -686,7 +773,7 @@ function contenidoModal() {
         <button class="btn grande secundario" data-act="modal" data-m="reglas">📜 Reglas</button>
         <button class="btn grande secundario" data-act="modal" data-m="historial">🗂️ Historial de rondas</button>
         ${encuestasHechas()}
-        ${pin ? `<div class="pin-box">Tu <b>clave de regreso</b>: <strong>${esc(pin)}</strong><small>Si se te rompe el celu o cambiás de navegador, entrá con tu mismo apodo, el código ${st.code} y esta clave. No se la muestres a nadie.</small></div>` : ''}`;
+        <div class="pin-box">¿Se te cortó o cambiaste de celular? Entrá al juego con <b>tu mismo mail</b> y volvés a esta partida (sala <b>${st.code}</b>).</div>`;
     }
     default:
       return '';
@@ -792,6 +879,14 @@ document.addEventListener('click', async (ev) => {
   if (d.confirm && !(await confirmar(d.confirm))) return;
 
   switch (act) {
+    case 'login': pantallaLogin(d.m); break;
+    case 'google': entrarConGoogle(); break;
+    case 'cerrarSesion':
+      if (await confirmar('¿Cerrar sesión en este celular?')) {
+        salirDeSala();
+        await fb.authMod.signOut(auth);
+      }
+      break;
     case 'cantidad':
       document.querySelectorAll('.cant:not(.deb):not(.vot)').forEach((x) => x.classList.toggle('elegida', x === b));
       break;
@@ -830,7 +925,7 @@ document.addEventListener('click', async (ev) => {
       if (!name) return;
       const code = document.getElementById('codigo').value.trim().toUpperCase();
       if (code.length !== 4) return toast('El código tiene 4 letras.', 'error');
-      const pin = (document.getElementById('pin') || {}).value || null;
+      const pin = null; // con cuenta de mail, se vuelve a entrar desde cualquier celular
       const r = await pedir({ op: 'join', code, name, pin });
       if (r) entrarASala(r.code);
       break;
@@ -961,11 +1056,13 @@ if (PRACTICA) {
   pantallaInicio();
 } else {
   $app.innerHTML = '<div class="cargando">Conectando con el búnker…</div>';
+  fb.authMod.getRedirectResult(auth).catch((e) => toast(errorAuth(e), 'error'));
   fb.onAuthStateChanged(auth, (u) => {
-    if (!u) {
-      fb.signInAnonymously(auth).catch((e) => {
-        $app.innerHTML = `<div class="aviso">No me pude conectar: ${esc(e.message)}</div>`;
-      });
+    if (!u || u.isAnonymous) {
+      // Sin sesión (o una sesión vieja sin mail): a la pantalla de ingreso.
+      if (u) fb.authMod.signOut(auth);
+      st.uid = null;
+      pantallaLogin();
       return;
     }
     if (st.uid === u.uid) return;

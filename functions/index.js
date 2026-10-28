@@ -56,6 +56,12 @@ async function transaccion(code, cambio) {
 exports.ballotage = onCall({ region: 'us-central1', maxInstances: 10 }, async (req) => {
   const uid = req.auth && req.auth.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Hace falta iniciar sesión.');
+  // Solo se juega con cuenta de mail (o Google): nada de usuarios anónimos.
+  const token = req.auth.token || {};
+  const email = token.email;
+  if (!email || (token.firebase && token.firebase.sign_in_provider === 'anonymous')) {
+    throw new HttpsError('unauthenticated', 'Tenés que entrar con tu mail para jugar.');
+  }
   const d = req.data || {};
   const ahora = Date.now();
 
@@ -71,7 +77,9 @@ exports.ballotage = onCall({ region: 'us-central1', maxInstances: 10 }, async (r
       const ref = getDatabase().ref('rooms/' + code);
       const res = await ref.transaction((sala) => {
         if (sala !== null) return undefined; // código ocupado
-        return engine.crearSala(code, uid, name, ahora);
+        const nueva = engine.crearSala(code, uid, name, ahora);
+        nueva.emails = { p1: email }; // registro para el administrador (nadie lo lee desde el juego)
+        return nueva;
       });
       if (res.committed) return { code, pid: 'p1' };
     }
@@ -90,7 +98,9 @@ exports.ballotage = onCall({ region: 'us-central1', maxInstances: 10 }, async (r
     })();
     const pid = await transaccion(code, (sala) => {
       sala.pub.lastActivity = ahora;
-      return engine.unirse(sala, uid, name, d.pin, ahora);
+      const pid = engine.unirse(sala, uid, name, d.pin, ahora);
+      sala.emails = Object.assign({}, sala.emails, { [pid]: email });
+      return pid;
     });
     return { code, pid };
   }

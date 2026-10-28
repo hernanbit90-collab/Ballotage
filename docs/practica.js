@@ -162,9 +162,9 @@ function elegirJugada() {
     }
     case 'declare': {
       const r = E.lista(g.history)[E.lista(g.history).length - 1];
-      const c = r.claims || {};
-      if (bot(g.chief) && c.chief === undefined) return { pid: g.chief, action: { type: 'declare', proposals: declaracion(g.chief, 'chief') } };
-      if (bot(g.vocero) && c.vocero === undefined) return { pid: g.vocero, action: { type: 'declare', proposals: declaracion(g.vocero, 'vocero') } };
+      const c = r.declared || {}; // las declaraciones se ven recién cuando están las dos
+      if (bot(g.chief) && !c.chief) return { pid: g.chief, action: { type: 'declare', proposals: declaracion(g.chief, 'chief') } };
+      if (bot(g.vocero) && !c.vocero) return { pid: g.vocero, action: { type: 'declare', proposals: declaracion(g.vocero, 'vocero') } };
       return null;
     }
     case 'chiefDiscard': {

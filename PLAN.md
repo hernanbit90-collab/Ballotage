@@ -12,7 +12,7 @@ Este es el plan corto, en criollo, de cómo se arma el juego.
 
 ## 2. Cómo se protegen los secretos
 
-- Cada celular entra con un usuario anónimo de Firebase (no pide mail ni contraseña).
+- Cada jugador entra con su mail (o su cuenta de Google). Así vuelve a su lugar desde cualquier celular.
 - La base de datos tiene tres "cajones" por sala:
   - **público**: tablero, votos ya abiertos, historial. Lo ven todos los de la sala.
   - **privado de cada jugador**: tu rol, tus compañeros, las cartas que tenés en la mano y los resultados de tus poderes. **Solo lo puede leer tu celular.**

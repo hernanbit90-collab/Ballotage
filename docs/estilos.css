@@ -448,3 +448,14 @@ a.btn.link { text-align: center; }
 .invitar { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 6px 0; }
 .btn.whatsapp { background: #25d366; color: #0b3b1f; text-decoration: none; }
 .codigo-sala small { display: block; margin-top: 4px; font-size: .78rem; }
+
+/* Ingreso con mail */
+.login h3 { margin-bottom: 4px; }
+.login .btn.grande { margin: 8px 0; }
+.btn.google { background: #fff; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.btn.google .g { font-family: var(--fuente-titulo); color: #4285f4; font-size: 1.2rem; }
+.login-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; }
+.login-links .btn.link { margin: 4px 0; }
+.sesion { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: .85rem; flex-wrap: wrap; }
+.sesion span { font-weight: 600; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
+.sesion .btn.link { margin: 0; font-size: .85rem; }

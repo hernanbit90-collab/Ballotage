@@ -5,7 +5,7 @@ Lo hacés una sola vez. Tardás unos 30 minutos. Necesitás una cuenta de Google
 En total son 5 pasos:
 1. Crear el proyecto en Firebase.
 2. Pasar a plan Blaze y poner una alerta de gasto.
-3. Prender el inicio de sesión anónimo y la base de datos.
+3. Prender el ingreso con mail (y con Google) y la base de datos.
 4. Subir el árbitro (el programa que reparte roles) desde Google Cloud Shell.
 5. Pegar tus datos en `config.js` y prender GitHub Pages.
 
@@ -28,12 +28,16 @@ En total son 5 pasos:
    - Entrá a <https://console.cloud.google.com/billing>, elegí tu cuenta de facturación → **Presupuestos y alertas** → **Crear presupuesto** → monto `1` → guardá.
    - Así, si algún día se pasara de 1 dólar, te llega un mail.
 
-## Paso 3 – Inicio de sesión anónimo y base de datos
+## Paso 3 – Ingreso con mail y base de datos
 
-**Inicio de sesión anónimo** (para que nadie tenga que poner mail ni contraseña):
+**Ingreso con mail** (cada jugador entra con su cuenta):
 1. Menú izquierdo → **Compilación / Build** → **Authentication** → **Comenzar**.
-2. Pestaña **Método de acceso** → **Anónimo** → activalo → **Guardar**.
-3. Pestaña **Configuración** → **Dominios autorizados** → **Agregar dominio** → escribí `TU-USUARIO-DE-GITHUB.github.io` (en tu caso, `hernanbit90-collab.github.io`).
+2. Pestaña **Método de acceso** → **Correo electrónico/contraseña** → activá el primer interruptor (no hace falta el de "vínculo de correo") → **Guardar**.
+3. Otra vez en **Método de acceso** → **Agregar proveedor nuevo** → **Google** → activalo, elegí tu mail como "correo de asistencia" → **Guardar**. (Así, quien tenga Gmail entra de un toque.)
+4. Pestaña **Configuración** → **Dominios autorizados** → **Agregar dominio** → escribí `hernanbit90-collab.github.io`. **Sin esto, "Entrar con Google" no funciona.**
+5. Opcional: en **Templates** (plantillas) podés poner el mail de "Restablecer contraseña" en español y cambiar el nombre del remitente a "BALLOTAGE".
+
+> ¿Quién entró? En **Authentication → Users** ves la lista de cuentas creadas. Si alguien no debería estar, lo podés deshabilitar o borrar desde ahí.
 
 **Base de datos**:
 1. Menú izquierdo → **Compilación / Build** → **Realtime Database** → **Crear base de datos**.
@@ -129,7 +133,7 @@ export const firebaseConfig = {
 2. Toca **"💬 Invitar por WhatsApp"**, elige el grupo o la persona y manda. El mensaje lleva el link (con el código ya cargado) y el código escrito.
    - O toca **"🔗 Copiar link"** y lo pega donde quiera.
    - También puede dictar el código: los invitados abren el link del juego, ponen el código y su apodo.
-3. Cada invitado abre el link, pone su **apodo** y toca **"Entrar"**. Van apareciendo en la lista (punto verde = conectado).
+3. Cada invitado abre el link, **entra con su mail** (la primera vez toca "Soy nuevo: crear cuenta", o "Entrar con Google"), pone su **apodo** y toca **"Entrar"**. Van apareciendo en la lista (punto verde = conectado).
 4. El administrador elige los **segundos de debate**, el **tiempo para votar** y si hay **declaraciones**. Si alguien se coló, lo puede sacar.
 5. Con 5 a 10 personas adentro, toca **"¡Largar la campaña!"**. A cada uno le llega su rol secreto en el celular.
 
@@ -139,9 +143,11 @@ Consejo: jueguen todos juntos en una llamada o en la misma mesa, porque el debat
 
 ## Preguntas frecuentes
 
-**Se me cortó el celular / se cerró el navegador.** Volvé a abrir el mismo link en el mismo celular y el mismo navegador: entrás directo a la partida.
+**Se me cortó el celular / se cerró el navegador.** Volvé a abrir el link: entrás directo a la partida.
 
-**Se me rompió el celular / cambié de navegador.** En el menú ☰ de tu celular viejo está tu **clave de regreso** (4 números). Desde el celular nuevo, entrá con el mismo apodo, el código de sala y esa clave (en "¿Volvés desde otro celular?").
+**Se me rompió el celular / cambié de navegador.** Entrá con **tu mismo mail** desde el otro celular y poné el código de la sala: volvés a tu lugar con tu rol.
+
+**Me olvidé la contraseña.** En la pantalla de ingreso tocá "Me olvidé la contraseña": te llega un mail para elegir una nueva (mirá en spam).
 
 **¿Alguien puede hacer trampa mirando el código de la página?** No. Los roles, el mazo y los votos sin abrir están guardados en un cajón que ningún celular puede leer. Cada celular solo recibe lo que le toca ver.
 
