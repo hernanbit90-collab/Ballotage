@@ -1,5 +1,27 @@
 # Cómo publicar BALLOTAGE (para gente que no programa)
 
+## ⚡ Camino rápido (recomendado): instalador automático
+
+Son 4 cosas y tardás unos 10 minutos (más la espera):
+
+1. **Tené una cuenta de facturación de Google** (pide tarjeta; con amigos cuesta $0). Si nunca creaste una: <https://console.cloud.google.com/billing/create>.
+2. Si nunca usaste Firebase, entrá una vez a <https://console.firebase.google.com> y aceptá los términos.
+3. Abrí <https://shell.cloud.google.com>, pegá esto y apretá Enter:
+
+```bash
+git clone https://github.com/hernanbit90-collab/Ballotage.git && cd Ballotage && bash instalar.sh
+```
+
+4. Cuando te pida iniciar sesión, abrí el link, elegí tu cuenta y pegá el código. Después esperá: hace todo solo (proyecto, facturación, alerta de 1 USD, ingreso con mail, base de datos, árbitro y página).
+
+Al final te muestra **el link para jugar** (`https://ballotage-xxxxxx.web.app`) y un bloque `firebaseConfig`: **pegáselo a Claude** para que quede guardado en GitHub.
+
+Si algo falla, el mensaje dice qué hacer; volvé a correr `bash instalar.sh` y retoma donde quedó.
+
+---
+
+## Camino manual (si preferís hacerlo a mano)
+
 Lo hacés una sola vez. Tardás unos 30 minutos. Necesitás una cuenta de Google y una de GitHub.
 
 En total son 5 pasos:
