@@ -102,7 +102,7 @@ function salirDeSala(msg) {
   Object.assign(st, { code: null, pid: null, pub: null, priv: null, presence: {}, modal: null, rolVisto: false, verRol: false,
     ultimoVoto: null, ultimaCuenta: null, ultimaEncuesta: null, ultimoEvento: null });
   guardado.set('code', null);
-  history.replaceState(null, '', location.pathname + (EMU ? '?emu' : params.has('practica') ? '?practica' : ''));
+  try { history.replaceState(null, '', location.pathname + (EMU ? '?emu' : params.has('practica') ? '?practica' : '')); } catch { /* sin historial */ }
   pantallaInicio();
   if (msg) toast(msg);
 }
@@ -630,6 +630,33 @@ function modalHistorial(g) {
   }).join('')}</div>`;
 }
 
+// ------------------------------------------------------------------ Confirmación
+
+// Pregunta "¿seguro?" dentro de la página (los cuadros del navegador
+// no andan en todos lados y en el celu quedan feos).
+function confirmar(texto) {
+  return new Promise((resolver) => {
+    const c = document.createElement('div');
+    c.className = 'modal-fondo confirmar';
+    c.innerHTML = `<div class="modal chico" role="alertdialog" aria-label="${esc(texto)}">
+      <p class="pregunta">${esc(texto)}</p>
+      <div class="dos">
+        <button class="btn grande secundario" data-r="0">Mejor no</button>
+        <button class="btn grande primario" data-r="1">¡Dale!</button>
+      </div>
+    </div>`;
+    c.addEventListener('click', (ev) => {
+      const b = ev.target.closest('[data-r]');
+      if (!b && ev.target !== c) return;
+      ev.stopPropagation();
+      c.remove();
+      resolver(!!b && b.dataset.r === '1');
+    });
+    document.body.appendChild(c);
+    c.querySelector('[data-r="1"]').focus();
+  });
+}
+
 // ------------------------------------------------------------------ Botones
 
 document.addEventListener('click', async (ev) => {
@@ -638,7 +665,7 @@ document.addEventListener('click', async (ev) => {
   const act = b.dataset.act;
   const d = b.dataset;
 
-  if (d.confirm && !confirm(d.confirm)) return;
+  if (d.confirm && !(await confirmar(d.confirm))) return;
 
   switch (act) {
     case 'cantidad':
@@ -687,11 +714,11 @@ document.addEventListener('click', async (ev) => {
     }
     case 'empezar': jugar({ type: 'start' }); break;
     case 'echar':
-      if (confirm('¿Sacar a ' + nombre(d.pid) + ' de la sala?')) jugar({ type: 'kick', target: d.pid });
+      if (await confirmar('¿Sacar a ' + nombre(d.pid) + ' de la sala?')) jugar({ type: 'kick', target: d.pid });
       break;
     case 'salir':
       if (PRACTICA) { salirDeSala(); break; }
-      if (confirm('¿Salir de la sala?')) {
+      if (await confirmar('¿Salir de la sala?')) {
         const r = await jugar({ type: 'leave' });
         if (r) salirDeSala();
       }
@@ -707,13 +734,13 @@ document.addEventListener('click', async (ev) => {
       break;
     }
     case 'descJefe':
-      if (confirm('¿Mandás esta carta a La Trituradora?')) jugar({ type: 'chiefDiscard', index: Number(d.i) });
+      if (await confirmar('¿Mandás esta carta a La Trituradora?')) jugar({ type: 'chiefDiscard', index: Number(d.i) });
       break;
     case 'descVoc':
-      if (confirm('¿Triturás esta carta y publicás la otra?')) jugar({ type: 'voceroDiscard', index: Number(d.i) });
+      if (await confirmar('¿Triturás esta carta y publicás la otra?')) jugar({ type: 'voceroDiscard', index: Number(d.i) });
       break;
     case 'pedirVeto':
-      if (confirm('¿Proponer VETO al Jefe de Campaña?')) jugar({ type: 'vetoRequest' });
+      if (await confirmar('¿Proponer VETO al Jefe de Campaña?')) jugar({ type: 'vetoRequest' });
       break;
     case 'veto': jugar({ type: 'vetoReply', accept: d.v === '1' }); break;
     case 'poder': jugar({ type: 'power', target: d.pid || null }); break;
