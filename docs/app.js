@@ -432,6 +432,7 @@ function pantallaJuego() {
   const vivo = g.alive[yo];
   // La pantalla final espera a que terminen las animaciones (no spoilear).
   const terminado = g.phase === 'ended' && !capaAbierta;
+  $app.className = 'juego';
   $app.innerHTML = `
     <header class="barra">
       ${A.logoChico()}
