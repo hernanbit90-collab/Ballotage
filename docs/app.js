@@ -6,6 +6,7 @@ import * as T from './textos.js';
 import * as A from './arte.js';
 import * as Practica from './practica.js';
 import * as Anfitrion from './anfitrion.js';
+import * as Voz from './voz.js';
 
 const { firebaseConfig, REGION } = CFG;
 
@@ -38,6 +39,7 @@ if (!PRACTICA) {
     au.connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
     da.connectDatabaseEmulator(db, '127.0.0.1', 9000);
   }
+  Voz.iniciar({ fb: da, db, onCambio: () => dibujar() });
   if (GRATIS) {
     Anfitrion.iniciar({ fb: da, db, ahora: () => Date.now() + st.desfase });
   } else {
@@ -113,6 +115,7 @@ const ahoraServidor = () => Date.now() + st.desfase;
 function salirDeSala(msg) {
   if (PRACTICA) Practica.detener();
   if (GRATIS && !PRACTICA) Anfitrion.detener();
+  if (!PRACTICA) { Voz.cortar(); Voz.sala(null, null); }
   st.cancelar.forEach((f) => f());
   st.cancelar = [];
   Object.assign(st, { code: null, pid: null, pub: null, priv: null, presence: {}, modal: null, rolVisto: false, verRol: false,
@@ -144,6 +147,7 @@ function entrarASala(code) {
 }
 
 function escucharSala(base, pid) {
+  Voz.sala(st.code, pid);
   // Las escuchas viejas (si cambió el pid) se reemplazan.
   st.cancelar.splice(1).forEach((f) => f());
   // En modo gratis, si este celular creó la sala, retoma el papel de árbitro.
@@ -403,6 +407,12 @@ function panelAjustes(p, soyHost) {
     ${soyHost
       ? `<div class="cantidades">${[0, 20, 30, 45, 60, 90].map((t) => `<button class="btn cant ${c.voteTime === t ? 'elegida' : ''}" data-act="ajuste" data-vote="${t}">${t ? t + ' s' : 'Sin'}</button>`).join('')}</div>`
       : `<p><b>${c.voteTime ? c.voteTime + ' segundos' : 'Sin límite'}</b></p>`}
+    <h3>🎧 Audio en el debate</h3>
+    <p class="nota izq">Cuando te toca hablar, se prende tu micrófono y todos te escuchan desde su celular. Si están juntos o en una llamada, apáguenlo.</p>
+    ${soyHost
+      ? `<div class="dos"><button class="btn cant ${c.voice !== false ? 'elegida' : ''}" data-act="ajuste" data-voice="1">Sí</button><button class="btn cant ${c.voice === false ? 'elegida' : ''}" data-act="ajuste" data-voice="0">No</button></div>`
+      : `<p><b>${c.voice !== false ? 'Sí' : 'No'}</b></p>`}
+    ${c.voice !== false ? '<button class="btn chico" data-act="probarMicro">🎙️ Probar mi micrófono</button>' : ''}
     <h3>🗣️ Declaraciones</h3>
     <p class="nota izq">Después de publicar, el Jefe y el Vocero cuentan qué cartas les llegaron. Pueden mentir.</p>
     ${soyHost
@@ -417,6 +427,7 @@ function pantallaJuego() {
   const g = st.pub.game;
   if (!g) return;
   detectarNovedades(g);
+  if (!PRACTICA) Voz.actualizar(g, st.pub.settings);
   const yo = st.pid;
   const vivo = g.alive[yo];
   // La pantalla final espera a que terminen las animaciones (no spoilear).
@@ -582,7 +593,35 @@ function panelDebate(g) {
     <ol class="oradores">${orden.map((p, i) => `<li class="${i < d.idx ? 'hablo' : i === d.idx ? 'ahora' : ''}">${esc(nombre(p))}</li>`).join('')}</ol>
     ${habla === yo ? '<button class="btn grande primario" data-act="pasarPalabra">Terminé, paso la palabra</button>' : ''}
     ${soyHost && habla !== yo && g.alive[yo] ? `<div class="dos"><button class="btn secundario" data-act="pasarPalabra">Siguiente orador</button><button class="btn" data-act="cortarDebate" data-confirm="¿Cortar el debate e ir a votar?">Ir a votar ya</button></div>` : ''}
+    ${panelVoz(habla)}
     ${!g.alive[yo] ? '<p class="nota">Los fantasmas no hablan.</p>' : ''}`;
+}
+
+function panelVoz(habla) {
+  if (PRACTICA || (st.pub.settings && st.pub.settings.voice === false)) return '';
+  const v = Voz.estadoActual();
+  if (habla === st.pid) {
+    const textos = {
+      'pidiendo-micro': '🎙️ Prendiendo tu micrófono… si te pregunta, tocá <b>Permitir</b>.',
+      'sin-micro': '⚠️ No pude usar tu micrófono. Revisá el permiso en el navegador (el candadito de arriba) y hablá en voz alta.',
+      'al-aire': v.callado ? '🔇 Te silenciaste: nadie te escucha.' : '<b>🔴 AL AIRE</b> · todos te están escuchando',
+    };
+    return `<div class="voz ${v.estado === 'al-aire' && !v.callado ? 'aire' : ''}">
+      <span>${textos[v.estado] || '🎙️ Preparando el micrófono…'}</span>
+      ${v.estado === 'al-aire' ? `<button class="btn chico" data-act="callarme">${v.callado ? '🎙️ Volver a hablar' : '🔇 Silenciarme'}</button>` : ''}
+    </div>`;
+  }
+  const textos = {
+    conectando: '🔊 Conectando con el micrófono de ' + esc(nombre(habla)) + '…',
+    escuchando: v.silenciado ? '🔇 Silenciaste el audio.' : '🔊 Escuchando a <b>' + esc(nombre(habla)) + '</b>',
+    'tocar-para-escuchar': '🔈 Tocá el botón para escuchar.',
+    'sin-conexion': '⚠️ No pude conectar el audio con ' + esc(nombre(habla)) + ' (puede ser la red). Que hable en voz alta o por llamada.',
+  };
+  return `<div class="voz">
+    <span>${textos[v.estado] || '🔊 Esperando el audio…'}</span>
+    ${v.estado === 'tocar-para-escuchar' ? '<button class="btn chico primario" data-act="escucharVoz">🔊 Escuchar</button>'
+      : `<button class="btn chico" data-act="silenciarVoz">${v.silenciado ? '🔊 Activar sonido' : '🔇 Silenciar'}</button>`}
+  </div>`;
 }
 
 function panelDeclarar(g) {
@@ -1002,12 +1041,24 @@ document.addEventListener('click', async (ev) => {
       break;
     }
     case 'cortarDebate': jugar({ type: 'debateNext', all: true }); break;
+    case 'callarme': Voz.callarme(!Voz.estadoActual().callado); break;
+    case 'silenciarVoz': Voz.silenciarAudio(!Voz.estadoActual().silenciado); break;
+    case 'escucharVoz': Voz.tocarParaEscuchar(); break;
+    case 'probarMicro':
+      try {
+        await Voz.probarMicrofono();
+        toast('🎙️ ¡Micrófono listo! Cuando te toque hablar se prende solo.');
+      } catch {
+        toast('No pude usar el micrófono. Tocá el candadito de la barra de direcciones y permitilo.', 'error');
+      }
+      break;
     case 'declarar': jugar({ type: 'declare', proposals: Number(d.n) }); break;
     case 'ajuste':
       jugar(Object.assign({ type: 'settings' },
         d.debate !== undefined ? { debate: Number(d.debate) }
           : d.vote !== undefined ? { voteTime: Number(d.vote) }
-            : { declare: d.declare === '1' }));
+            : d.voice !== undefined ? { voice: d.voice === '1' }
+              : { declare: d.declare === '1' }));
       break;
     case 'revancha': jugar({ type: 'rematch' }); break;
     case 'reglas':

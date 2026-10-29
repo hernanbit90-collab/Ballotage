@@ -23,6 +23,10 @@
           "$pid": {
             ".read": "auth != null && root.child('rooms').child($code).child('auth').child(auth.uid).val() === $pid"
           }
+        },
+        "rtc": {
+          ".read": "auth != null && root.child('rooms').child($code).child('auth').child(auth.uid).exists()",
+          ".write": "auth != null && root.child('rooms').child($code).child('auth').child(auth.uid).exists()"
         }
       }
     }

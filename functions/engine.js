@@ -107,7 +107,7 @@ function crearSala(code, uid, name, ahora) {
       nextPid: 2,
       createdAt: ahora,
       players: { p1: { name, joinedAt: ahora } },
-      settings: { debate: DEBATE_POR_DEFECTO, declare: true, voteTime: VOTO_POR_DEFECTO },
+      settings: { debate: DEBATE_POR_DEFECTO, declare: true, voteTime: VOTO_POR_DEFECTO, voice: true },
     },
     priv: { p1: { pin: null } },
   };
@@ -177,6 +177,7 @@ function ajustes(S, pid, a) {
     actual.debate = a.debate;
   }
   if (a.declare !== undefined) actual.declare = !!a.declare;
+  if (a.voice !== undefined) actual.voice = !!a.voice;
   if (a.voteTime !== undefined) {
     exigir(VOTO_OPCIONES.includes(a.voteTime), 'Tiempo de votación inválido.');
     actual.voteTime = a.voteTime;
@@ -190,6 +191,7 @@ function config(S) {
     debate: DEBATE_OPCIONES.includes(c.debate) ? c.debate : DEBATE_POR_DEFECTO,
     declare: c.declare !== false,
     voteTime: VOTO_OPCIONES.includes(c.voteTime) ? c.voteTime : VOTO_POR_DEFECTO,
+    voice: c.voice !== false, // audio en vivo para el que tiene la palabra
   };
 }
 
