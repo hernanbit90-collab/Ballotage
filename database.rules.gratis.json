@@ -43,6 +43,10 @@
               ".write": "auth != null && auth.uid === $uid && !newData.exists()"
             }
           }
+        },
+        "rtc": {
+          ".read": "auth != null && root.child('rooms').child($code).child('auth').child(auth.uid).exists()",
+          ".write": "auth != null && root.child('rooms').child($code).child('auth').child(auth.uid).exists()"
         }
       }
     }

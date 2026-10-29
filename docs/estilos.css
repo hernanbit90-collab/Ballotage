@@ -460,3 +460,9 @@ a.btn.link { text-align: center; }
 .sesion span { font-weight: 600; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
 .sesion .btn.link { margin: 0; font-size: .85rem; }
 .aviso.pausa { background: var(--amarillo); }
+
+/* Audio del debate */
+.voz { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; background: var(--papel-2); border-radius: 10px; padding: 8px 10px; margin: 8px 0; font-size: .9rem; }
+.voz span { min-width: 0; flex: 1 1 180px; }
+.voz.aire { background: var(--rojo); color: #fff; animation: titilar 1.4s infinite; }
+.voz.aire .btn { background: #fff; }

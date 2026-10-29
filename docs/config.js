@@ -20,3 +20,7 @@ export const MODO = 'gratis';
 
 // Región donde corre el árbitro en modo 'servidor'. No la cambies salvo que sepas lo que hacés.
 export const REGION = 'us-central1';
+
+// Audio del debate: servidores extra para redes que bloquean la conexión
+// directa entre celulares (TURN). Vacío = solo conexión directa.
+export const ICE_EXTRA = [];
