@@ -19,7 +19,7 @@ let esperaba = false; // el humano estaba mirando una animación
 let dicho = null; // lo que dijo el bot que está hablando
 let vistas = {}; // cuántas Propuestas vio cada bot en su mano, para declarar
 
-export function iniciar(nombre, n, onCambio, ajustes) {
+export function iniciar(nombre, n, onCambio, ajustes, look) {
   detener();
   avisar = onCambio;
   const ahora = Date.now();
@@ -28,6 +28,7 @@ export function iniciar(nombre, n, onCambio, ajustes) {
     .slice(0, n - 1)
     .forEach((b, i) => E.unirse(S, 'bot' + i, b, null, ahora + i + 1));
   if (ajustes) E.aplicar(S, YO, Object.assign({ type: 'settings' }, ajustes), rnd);
+  if (look) { try { E.aplicar(S, YO, { type: 'look', look }, rnd); } catch { /* personaje viejo o inválido */ } }
   S = clonar(S);
   E.aplicar(S, YO, { type: 'start' }, rnd);
   emitir();

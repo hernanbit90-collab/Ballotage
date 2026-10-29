@@ -517,3 +517,16 @@ a.btn.link { text-align: center; }
 .asiento.es-jefe { z-index: 4; }
 .cartel.cand.jefe { background: repeating-linear-gradient(-45deg, var(--amarillo) 0 6px, #ffe486 6px 12px); }
 .cartel.cand.vocero { background: repeating-linear-gradient(-45deg, var(--cielo) 0 6px, #9be3f7 6px 12px); }
+
+/* ---------- Personaje ---------- */
+.mini-cara .avatar { width: 34px; height: 34px; }
+.vista-personaje { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 6px 0; }
+.vista-personaje .avatar { width: 120px; height: 120px; filter: drop-shadow(0 4px 0 rgba(0, 0, 0, .2)); }
+.fila-look h3 { font-size: .9rem; margin: 12px 0 6px; }
+.opciones-look { display: flex; flex-wrap: wrap; gap: 8px; }
+.muestra { width: 36px; height: 36px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px rgba(0, 0, 0, .15); cursor: pointer; padding: 0; }
+.muestra.elegida { box-shadow: 0 0 0 3px var(--fucsia); transform: scale(1.1); }
+.muestra-cara { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 70px; padding: 4px; border-radius: 12px; border: 2px solid transparent; background: #fff; cursor: pointer; font: inherit; }
+.muestra-cara .avatar { width: 52px; height: 52px; }
+.muestra-cara small { font-size: .62rem; font-weight: 600; color: var(--tinta); }
+.muestra-cara.elegida { border-color: var(--fucsia); background: #ffe6f1; }

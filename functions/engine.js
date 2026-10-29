@@ -195,6 +195,20 @@ function config(S) {
   };
 }
 
+// Personaje de cada jugador (solo aspecto: no dice nada del rol).
+const LOOK_OPCIONES = { piel: 6, pelo: 8, colorPelo: 7, lentes: 2, cara: 3, gorro: 4, ropa: 8, fondo: 8 };
+
+function personaje(S, pid, look) {
+  exigir(look && typeof look === 'object', 'Personaje inválido.');
+  const limpio = {};
+  for (const k of Object.keys(LOOK_OPCIONES)) {
+    const v = look[k];
+    exigir(Number.isInteger(v) && v >= 0 && v < LOOK_OPCIONES[k], 'Personaje inválido.');
+    limpio[k] = v;
+  }
+  S.pub.players[pid].look = limpio;
+}
+
 // ---------------------------------------------------------------- Inicio
 
 function empezar(S, pid, rnd) {
@@ -741,6 +755,7 @@ function aplicar(S, pid, a, rnd, ahora) {
     case 'start': return empezar(S, pid, rnd);
     case 'rematch': return revancha(S, pid);
     case 'settings': return ajustes(S, pid, a);
+    case 'look': return personaje(S, pid, a.look);
   }
   exigir(enJuego, 'No hay partida en curso.');
   switch (a.type) {
@@ -761,7 +776,7 @@ function aplicar(S, pid, a, rnd, ahora) {
 const API = {
   ROLES, BANDOS, CARTAS, PODERES, OPERADORES_POR_CANTIDAD,
   ErrorJuego, crearSala, unirse, limpiarNombre, aplicar, puedeSerVocero, tableroEscandalos, lista,
-  config, DEBATE_OPCIONES, VOTO_OPCIONES,
+  config, DEBATE_OPCIONES, VOTO_OPCIONES, LOOK_OPCIONES,
 };
 
 // En el servidor se usa con require(); en el modo práctica del navegador,

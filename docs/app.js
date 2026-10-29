@@ -189,6 +189,7 @@ function pantallaPractica() {
       <div class="cantidades">${[0, 20, 30, 45, 60, 90].map((t) => `<button class="btn cant vot ${t === 30 ? 'elegida' : ''}" data-act="cantidadVot" data-t="${t}">${t || 'Sin'}</button>`).join('')}</div>
       <p class="nota">Si no votás a tiempo, tu boleta cuenta como ¡Sí!</p>
     </div>
+    <button class="btn grande secundario" data-act="editarPersonaje">🎨 Armar mi personaje</button>
     <button class="btn grande primario" data-act="practicar">¡Largar la campaña!</button>
     <button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button>
     ${configurado ? `<a class="btn link" href="${location.pathname}">🌐 Jugar online con amigos</a>` : ''}
@@ -342,6 +343,12 @@ function dibujar() {
   pantallaJuego();
 }
 
+const lookDe = (pid) => (st.pub && st.pub.players[pid] && st.pub.players[pid].look) || null;
+
+function miLookGuardado() {
+  try { return JSON.parse(guardado.get('look') || 'null'); } catch { return null; }
+}
+
 function nombre(pid) {
   return (st.pub.players[pid] && st.pub.players[pid].name) || '¿?';
 }
@@ -355,6 +362,11 @@ function invitacion(link) {
 
 function pantallaEspera() {
   const p = st.pub;
+  const guardadoLook = miLookGuardado();
+  if (guardadoLook && !p.players[st.pid].look && !st.lookEnviado) {
+    st.lookEnviado = true;
+    jugar({ type: 'look', look: guardadoLook }, true);
+  }
   const pids = Object.keys(p.players).sort((a, b) => p.players[a].joinedAt - p.players[b].joinedAt);
   const soyHost = p.host === st.pid;
   const n = pids.length;
@@ -374,10 +386,12 @@ function pantallaEspera() {
     ${avisoAnfitrion()}
     ${GRATIS && soyHost ? '<p class="nota">📱 Sos el anfitrión: <b>dejá el juego abierto en tu celular</b> mientras juegan (tu celular hace de árbitro).</p>' : ''}
     <h2>Militantes en el búnker <small>${n}/10</small></h2>
+    <button class="btn grande secundario" data-act="editarPersonaje">🎨 Armar mi personaje</button>
     <ul class="lista-jugadores">
       ${pids.map((pid) => `
         <li>
           <span class="punto ${st.presence[pid] ? 'on' : ''}"></span>
+          <span class="mini-cara">${A.avatar(p.players[pid].name, p.players[pid].look)}</span>
           <span class="nombre">${esc(p.players[pid].name)}${pid === st.pid ? ' <em>(vos)</em>' : ''}</span>
           ${pid === p.host ? '<span class="chapa">anfitrión</span>' : ''}
           ${soyHost && pid !== st.pid && !PRACTICA ? `<button class="btn chico peligro" data-act="echar" data-pid="${pid}">Sacar</button>` : ''}
@@ -508,7 +522,7 @@ function filaJugadores(g) {
     const rev = g.reveal ? `<span class="rol-final ${g.reveal[pid]}">${esc(T.ROLES[g.reveal[pid]].titulo)}</span>` : '';
     return `<div class="${cls}" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%">
       ${pid === st.pid ? '<span class="vos">VOS</span>' : ''}
-      <div class="cara">${A.avatar(nombre(pid))}${pid === habla ? '<span class="marca habla" title="Está hablando">🎙️</span>' : ''}${!g.alive[pid] ? '<span class="sello-out">OUT</span>' : ''}</div>
+      <div class="cara">${A.avatar(nombre(pid), lookDe(pid))}${pid === habla ? '<span class="marca habla" title="Está hablando">🎙️</span>' : ''}${!g.alive[pid] ? '<span class="sello-out">OUT</span>' : ''}</div>
       <div class="nom">${esc(nombre(pid))}</div>
       ${cartel}${estado}${rev}
     </div>`;
@@ -894,9 +908,47 @@ function dibujarModal() {
   m.innerHTML = `<div class="modal">${contenidoModal()}<button class="btn link cerrar" data-act="cerrarModal">Cerrar</button></div>`;
 }
 
+// ------------------------------------------------------------------ Editor de personaje
+
+const FILAS_LOOK = [
+  ['piel', 'Piel', 'color'],
+  ['pelo', 'Peinado', 'cara'],
+  ['colorPelo', 'Color de pelo', 'color'],
+  ['lentes', 'Anteojos', 'cara'],
+  ['cara', 'Bigote o barba', 'cara'],
+  ['gorro', 'Gorro', 'cara'],
+  ['ropa', 'Ropa', 'color'],
+  ['fondo', 'Fondo', 'color'],
+];
+
+function editorPersonaje() {
+  const nom = st.lookNombre || 'Vos';
+  const L = st.lookEdit;
+  const filas = FILAS_LOOK.map(([k, titulo, tipo]) => `
+    <div class="fila-look">
+      <h3>${titulo}</h3>
+      <div class="opciones-look ${tipo}">
+        ${A.LOOK[k].map((v, i) => {
+          const elegido = L[k] === i ? 'elegida' : '';
+          if (tipo === 'color') return `<button class="muestra ${elegido}" style="background:${v}" data-act="look" data-k="${k}" data-v="${i}" aria-label="${titulo} ${i + 1}"></button>`;
+          const prueba = Object.assign({}, L, { [k]: i });
+          return `<button class="muestra-cara ${elegido}" data-act="look" data-k="${k}" data-v="${i}" aria-label="${esc(v)}">${A.avatar(nom, prueba)}<small>${esc(v)}</small></button>`;
+        }).join('')}
+      </div>
+    </div>`).join('');
+  return `<h2>🎨 Tu personaje</h2>
+    <div class="vista-personaje">${A.avatar(nom, L)}<b>${esc(nom)}</b></div>
+    <p class="nota">Es solo tu cara en la mesa: no tiene nada que ver con el rol que te toque.</p>
+    <button class="btn grande secundario" data-act="lookAzar">🎲 Al azar</button>
+    ${filas}
+    <button class="btn grande primario" data-act="guardarLook">Listo, guardar</button>`;
+}
+
 function contenidoModal() {
   const g = st.pub && st.pub.game;
   switch (st.modal) {
+    case 'personaje':
+      return editorPersonaje();
     case 'reglas':
       return `<div class="reglas">${A.logoChico()}${T.REGLAS}</div>`;
     case 'rol':
@@ -1050,7 +1102,7 @@ document.addEventListener('click', async (ev) => {
         st.priv = e.priv;
         st.presence = e.presence;
         dibujar();
-      }, { debate, declare: true, voteTime });
+      }, { debate, declare: true, voteTime }, miLookGuardado());
       break;
     }
     case 'crear': {
@@ -1121,6 +1173,36 @@ document.addEventListener('click', async (ev) => {
       break;
     }
     case 'cortarDebate': jugar({ type: 'debateNext', all: true }); break;
+    case 'editarPersonaje': {
+      const campo = document.getElementById('apodo');
+      const nom = (st.pub && st.pub.players && st.pub.players[st.pid] && st.pub.players[st.pid].name)
+        || (campo && campo.value.trim()) || guardado.get('name') || 'Vos';
+      st.lookNombre = nom;
+      st.lookEdit = Object.assign({}, lookDe(st.pid) || miLookGuardado() || A.lookDesdeNombre(nom));
+      st.modal = 'personaje';
+      dibujarModal();
+      break;
+    }
+    case 'look': {
+      const caja = document.querySelector('#modal .modal');
+      const scroll = caja ? caja.scrollTop : 0;
+      st.lookEdit[d.k] = Number(d.v);
+      dibujarModal();
+      const nueva = document.querySelector('#modal .modal');
+      if (nueva) nueva.scrollTop = scroll;
+      break;
+    }
+    case 'lookAzar':
+      st.lookEdit = A.lookAlAzar();
+      dibujarModal();
+      break;
+    case 'guardarLook':
+      guardado.set('look', JSON.stringify(st.lookEdit));
+      if (st.pub && st.pub.players && st.pub.players[st.pid]) jugar({ type: 'look', look: st.lookEdit });
+      st.modal = null;
+      dibujarModal();
+      toast('¡Listo! Así te van a ver en la mesa.');
+      break;
     case 'callarme': Voz.callarme(!Voz.estadoActual().callado); break;
     case 'silenciarVoz': Voz.silenciarAudio(!Voz.estadoActual().silenciado); break;
     case 'escucharVoz': Voz.tocarParaEscuchar(); break;

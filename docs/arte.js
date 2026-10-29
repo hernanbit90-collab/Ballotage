@@ -51,36 +51,105 @@ export const logoChico = () => '<span class="logo-chico">BALLOTAGE</span>';
 
 // ------------------------------------------------------------------ Caritas de jugadores
 
-export function avatar(nombre) {
+// Opciones del personaje (tienen que coincidir con LOOK_OPCIONES del reglamento).
+export const LOOK = {
+  piel: ['#f6d1b1', '#efbf98', '#d9a477', '#b8805a', '#8d5a3b', '#5e3b26'],
+  pelo: ['Corto', 'Rapado', 'Rulos', 'Largo', 'Rodete', 'Jopo', 'Pelado', 'Flequillo'],
+  colorPelo: ['#1d1a2b', '#4a2f1b', '#8a5a2b', '#d9b44a', '#b03a2e', '#9a9aa8', '#f2efe6'],
+  lentes: ['Sin anteojos', 'Con anteojos'],
+  cara: ['Nada', 'Bigote', 'Barba'],
+  gorro: ['Nada', 'Gorra', 'Boina', 'Vincha'],
+  ropa: ['#ff2e88', '#ff7a1a', '#ffd23f', '#1ec8b0', '#4cc9f0', '#9b5de5', '#2a2166', '#f2efe6'],
+  fondo: ['#ff2e88', '#ff7a1a', '#ffd23f', '#1ec8b0', '#4cc9f0', '#9b5de5', '#e63946', '#8a86a6'],
+};
+
+// Si el jugador no eligió, se arma uno a partir del nombre (siempre el mismo).
+export function lookDesdeNombre(nombre) {
   const h = hash(nombre);
-  const piel = PIELES[h % PIELES.length];
-  const pelo = PELOS[(h >> 3) % PELOS.length];
-  const fondo = FONDOS[(h >> 6) % FONDOS.length];
-  const peinado = (h >> 9) % 5;
-  const bigote = (h >> 12) % 4 === 0;
-  const anteojos = (h >> 14) % 5 === 0;
-  const boca = (h >> 16) % 3;
-  const pelos = [
-    `<path d="M14 26c0-12 8-18 18-18s18 6 18 18c-4-6-10-8-18-8s-14 2-18 8z" fill="${pelo}"/>`,
-    `<path d="M13 30c-2-16 8-23 19-23s21 7 19 23c-2-5-4-9-6-10-6 3-20 3-26 0-2 1-4 5-6 10z" fill="${pelo}"/>`,
-    `<circle cx="22" cy="14" r="7" fill="${pelo}"/><circle cx="32" cy="11" r="8" fill="${pelo}"/><circle cx="42" cy="14" r="7" fill="${pelo}"/>`,
-    `<path d="M12 34c-4-20 6-27 20-27s24 7 20 27l-4-14c-8 4-24 4-32 0z" fill="${pelo}"/><path d="M12 30c-2 10 0 18 2 22M52 30c2 10 0 18-2 22" stroke="${pelo}" stroke-width="5" fill="none"/>`,
-    `<path d="M18 16c6-6 22-6 28 0" stroke="${pelo}" stroke-width="4" fill="none"/>`,
-  ][peinado];
-  const bocas = [
-    '<path d="M26 42q6 5 12 0" stroke="#1d1a2b" stroke-width="2.5" fill="none" stroke-linecap="round"/>',
-    '<path d="M25 41q7 8 14 0z" fill="#1d1a2b"/>',
-    '<path d="M27 43h10" stroke="#1d1a2b" stroke-width="2.5" stroke-linecap="round"/>',
-  ][boca];
+  const elegir = (k, corrimiento) => (h >>> corrimiento) % LOOK[k].length;
+  return {
+    piel: elegir('piel', 0), pelo: elegir('pelo', 3), colorPelo: elegir('colorPelo', 6),
+    lentes: (h >>> 9) % 5 === 0 ? 1 : 0, cara: (h >>> 11) % 4 === 0 ? 1 + ((h >>> 13) % 2) : 0,
+    gorro: (h >>> 14) % 4 === 0 ? 1 + ((h >>> 16) % 3) : 0, ropa: elegir('ropa', 18), fondo: elegir('fondo', 21),
+  };
+}
+
+export function lookAlAzar() {
+  const r = (n) => Math.floor(Math.random() * n);
+  const L = {};
+  for (const k of Object.keys(LOOK)) L[k] = r(LOOK[k].length);
+  if (r(3)) L.lentes = 0;
+  if (r(2)) L.cara = 0;
+  if (r(2)) L.gorro = 0;
+  return L;
+}
+
+function lookValido(look) {
+  if (!look || typeof look !== 'object') return null;
+  for (const k of Object.keys(LOOK)) if (!Number.isInteger(look[k]) || look[k] < 0 || look[k] >= LOOK[k].length) return null;
+  return look;
+}
+
+// Carita del jugador. Siempre con la misma expresión tranquila: no da pistas del rol.
+export function avatar(nombre, look) {
+  const L = lookValido(look) || lookDesdeNombre(nombre);
+  const piel = LOOK.piel[L.piel];
+  const pelo = LOOK.colorPelo[L.colorPelo];
+  const ropa = LOOK.ropa[L.ropa];
+  const fondo = LOOK.fondo[L.fondo];
+  const linea = '#1d1a2b';
+  const peinados = [
+    // Corto
+    `<path d="M18 27c0-10 6-16 14-16s14 6 14 16c-3-4-6-6-9-6-3 2-8 2-12 1-3 0-5 2-7 5z" fill="${pelo}"/>`,
+    // Rapado
+    `<path d="M19 25c1-8 6-12 13-12s12 4 13 12c-4-3-8-4-13-4s-9 1-13 4z" fill="${pelo}" opacity=".85"/>`,
+    // Rulos
+    `<g fill="${pelo}"><circle cx="21" cy="21" r="6"/><circle cx="28" cy="15" r="6.5"/><circle cx="36" cy="15" r="6.5"/><circle cx="43" cy="21" r="6"/><circle cx="17" cy="28" r="4.5"/><circle cx="47" cy="28" r="4.5"/></g>`,
+    // Largo
+    `<path d="M15 44c-3-18 2-32 17-32s20 14 17 32l-5-2c1-8 0-14-2-18-5 3-15 3-20 0-2 4-3 10-2 18z" fill="${pelo}"/>`,
+    // Rodete
+    `<circle cx="32" cy="9" r="6" fill="${pelo}"/><path d="M18 27c0-10 6-15 14-15s14 5 14 15c-3-4-8-6-14-6s-11 2-14 6z" fill="${pelo}"/>`,
+    // Jopo
+    `<path d="M18 28c-1-9 4-17 14-18 4-4 12-3 14 2 2 4 1 10 0 16-3-5-8-7-14-7s-11 2-14 7z" fill="${pelo}"/>`,
+    // Pelado (con costados)
+    `<path d="M17 31c0-5 1-8 3-10M47 31c0-5-1-8-3-10" stroke="${pelo}" stroke-width="4" stroke-linecap="round" fill="none"/>`,
+    // Flequillo
+    `<path d="M17 30c-1-12 5-19 15-19s16 7 15 19c-2-3-4-5-6-5l-2 3-3-4-3 4-3-4-3 4-3-3c-3 0-5 2-7 5z" fill="${pelo}"/>`,
+  ];
+  const caras = [
+    '',
+    `<path d="M26 41q6-3 12 0q-6 2.5-12 0z" fill="${pelo}"/>`,
+    `<path d="M20 34c0 10 5 16 12 16s12-6 12-16c-2 5-5 8-12 8s-10-3-12-8z" fill="${pelo}" opacity=".9"/>`,
+  ];
+  const gorros = [
+    '',
+    `<path d="M17 25c0-9 7-14 15-14s15 5 15 14z" fill="${ropa}" stroke="${linea}" stroke-width="1.5"/><path d="M30 24h22c0 3-3 4-6 4H30z" fill="${ropa}" stroke="${linea}" stroke-width="1.5"/><circle cx="32" cy="12" r="1.8" fill="${linea}"/>`,
+    `<path d="M15 23c2-8 10-12 18-11 9 1 15 5 16 10-6 3-27 4-34 1z" fill="${linea}"/><circle cx="34" cy="11" r="1.6" fill="${linea}"/>`,
+    `<path d="M17 22c4-4 26-4 30 0v4c-4-3-26-3-30 0z" fill="${ropa}" stroke="${linea}" stroke-width="1.2"/>`,
+  ];
+  const lentes = L.lentes
+    ? `<g fill="rgba(255,255,255,.25)" stroke="${linea}" stroke-width="1.6"><circle cx="26" cy="31" r="4.6"/><circle cx="38" cy="31" r="4.6"/></g><path d="M30.6 31h2.8" stroke="${linea}" stroke-width="1.6"/>`
+    : '';
   return `<svg class="avatar" viewBox="0 0 64 64" aria-hidden="true">
     <circle cx="32" cy="32" r="31" fill="${fondo}"/>
-    <path d="M10 64c2-12 10-16 22-16s20 4 22 16z" fill="#fff8e7"/>
-    <ellipse cx="32" cy="31" rx="17" ry="19" fill="${piel}"/>
-    ${pelos}
-    <circle cx="25" cy="30" r="2.6" fill="#1d1a2b"/><circle cx="39" cy="30" r="2.6" fill="#1d1a2b"/>
-    ${anteojos ? '<g stroke="#1d1a2b" stroke-width="2" fill="none"><circle cx="25" cy="30" r="6"/><circle cx="39" cy="30" r="6"/><path d="M31 30h2"/></g>' : ''}
-    ${bigote ? `<path d="M23 38q9-5 18 0q-9 3-18 0z" fill="${pelo}"/>` : ''}
-    ${bocas}
+    <path d="M8 64c2-11 10-16 24-16s22 5 24 16z" fill="${ropa}" stroke="${linea}" stroke-width="1.5"/>
+    <path d="M26 48l6 6 6-6" fill="#fff8e7" stroke="${linea}" stroke-width="1.2"/>
+    <rect x="27.5" y="41" width="9" height="8" rx="3" fill="${piel}"/>
+    <ellipse cx="18.5" cy="32" rx="3" ry="4" fill="${piel}" stroke="${linea}" stroke-width="1"/>
+    <ellipse cx="45.5" cy="32" rx="3" ry="4" fill="${piel}" stroke="${linea}" stroke-width="1"/>
+    <ellipse cx="32" cy="31" rx="13.5" ry="15" fill="${piel}" stroke="${linea}" stroke-width="1.2"/>
+    <ellipse cx="32" cy="38" rx="9" ry="5" fill="#000" opacity=".05"/>
+    ${caras[L.cara] === undefined ? '' : L.cara === 2 ? caras[2] : ''}
+    ${peinados[L.pelo]}
+    <path d="M23 27.5q3-1.6 6 0M35 27.5q3-1.6 6 0" stroke="${linea}" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+    <circle cx="26" cy="31" r="1.9" fill="${linea}"/><circle cx="38" cy="31" r="1.9" fill="${linea}"/>
+    <circle cx="26.6" cy="30.4" r=".6" fill="#fff"/><circle cx="38.6" cy="30.4" r=".6" fill="#fff"/>
+    <path d="M32 33v3.5l-1.5.6" stroke="${linea}" stroke-width="1" fill="none" stroke-linecap="round" opacity=".6"/>
+    <circle cx="22.5" cy="36" r="2.2" fill="#ff8fa3" opacity=".25"/><circle cx="41.5" cy="36" r="2.2" fill="#ff8fa3" opacity=".25"/>
+    ${L.cara === 1 ? caras[1] : ''}
+    <path d="M28.5 40.5q3.5 2 7 0" stroke="${linea}" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+    ${lentes}
+    ${gorros[L.gorro]}
   </svg>`;
 }
 
