@@ -465,33 +465,85 @@ function avisoAnfitrion() {
   return `<div class="aviso pausa">⏸️ <b>${esc(nombre(st.pub.host))}</b> (anfitrión) cerró el juego. La partida sigue cuando lo vuelva a abrir.</div>`;
 }
 
+// La mesa redonda: todos sentados en el orden en que rota el cargo,
+// y en el centro lo que está pasando ahora.
 function filaJugadores(g) {
-  return `<section class="jugadores">
-    ${lista(g.order).map((pid) => {
-      const cls = [
-        'jug',
-        !g.alive[pid] ? 'muerto' : '',
-        pid === st.pid ? 'yo' : '',
-        st.presence[pid] ? '' : 'offline',
-      ].join(' ');
-      const marcas = [];
-      const habla = g.phase === 'debate' && g.debate ? lista(g.debate.order)[g.debate.idx] : null;
-      if (pid === habla) marcas.push('<span class="marca habla" title="Está hablando">🎙️</span>');
-      if (pid === g.candidate && ['nominate', 'debate', 'vote'].includes(g.phase)) marcas.push(`<span class="marca jefe" title="Candidato a Jefe">${A.credencial(true)}</span>`);
-      if (pid === g.nominee && ['debate', 'vote'].includes(g.phase)) marcas.push(`<span class="marca vocero" title="Candidato a Vocero">${A.microfono(true)}</span>`);
-      if (pid === g.chief && g.chief &&  !['nominate', 'debate', 'vote'].includes(g.phase)) marcas.push(`<span class="marca jefe" title="Jefe de Campaña">${A.credencial()}</span>`);
-      if (pid === g.vocero && g.vocero &&  !['nominate', 'debate', 'vote'].includes(g.phase)) marcas.push(`<span class="marca vocero" title="Vocero">${A.microfono()}</span>`);
-      const voto = g.phase === 'vote' && g.alive[pid] ? (g.voted && g.voted[pid] ? '<span class="voto-ok">✔ votó</span>' : '<span class="voto-esp">…</span>') : '';
-      const limite = g.phase === 'nominate' && g.alive[pid] && pid !== g.candidate && !puedeSerVocero(g, pid) ? '<span class="limite">no elegible</span>' : '';
-      const rev = g.reveal ? `<span class="rol-final ${g.reveal[pid]}">${esc(T.ROLES[g.reveal[pid]].titulo)}</span>` : '';
-      return `<div class="${cls}${pid === habla ? ' hablando' : ''}">
-        <div class="cara">${A.avatar(nombre(pid))}${marcas.join('')}</div>
-        <div class="nom">${esc(nombre(pid))}</div>
-        ${voto}${limite}${rev}
-        ${!g.alive[pid] ? '<div class="sello-out">CARPETAZO</div>' : ''}
-      </div>`;
-    }).join('')}
+  const orden = lista(g.order);
+  const n = orden.length;
+  const habla = g.phase === 'debate' && g.debate ? lista(g.debate.order)[g.debate.idx] : null;
+  const enEleccion = ['nominate', 'debate', 'vote'].includes(g.phase);
+  const proximo = proximoCandidato(g);
+  const asientos = orden.map((pid, i) => {
+    // Arranca arriba y gira en el sentido de las agujas del reloj.
+    const ang = (-90 + (360 * i) / n) * (Math.PI / 180);
+    const x = 50 + 41 * Math.cos(ang);
+    const y = 50 + 39 * Math.sin(ang);
+    const cls = [
+      'asiento',
+      !g.alive[pid] ? 'muerto' : '',
+      pid === st.pid ? 'yo' : '',
+      st.presence[pid] ? '' : 'offline',
+      pid === habla ? 'hablando' : '',
+      (enEleccion ? pid === g.candidate : pid === g.chief) ? 'es-jefe' : '',
+      (enEleccion ? pid === g.nominee : pid === g.vocero) ? 'es-vocero' : '',
+    ].join(' ');
+    const marcas = [];
+    if (enEleccion ? pid === g.candidate : pid === g.chief && g.chief) marcas.push(`<span class="marca jefe" title="${enEleccion ? 'Candidato a Jefe' : 'Jefe de Campaña'}">${A.credencial(enEleccion)}</span>`);
+    if (enEleccion ? pid === g.nominee && g.nominee : pid === g.vocero && g.vocero) marcas.push(`<span class="marca vocero" title="${enEleccion ? 'Candidato a Vocero' : 'Vocero'}">${A.microfono(enEleccion)}</span>`);
+    if (pid === habla) marcas.push('<span class="marca habla" title="Está hablando">🎙️</span>');
+    let estado = '';
+    if (g.phase === 'vote' && g.alive[pid]) estado = g.voted && g.voted[pid] ? '<span class="voto-ok">✔ votó</span>' : '<span class="voto-esp">votando…</span>';
+    else if (g.phase === 'nominate' && g.alive[pid] && pid !== g.candidate && !puedeSerVocero(g, pid)) estado = '<span class="limite">no elegible</span>';
+    else if (pid === proximo && g.phase !== 'ended' && pid !== g.candidate) estado = '<span class="proximo">próximo Jefe</span>';
+    const rev = g.reveal ? `<span class="rol-final ${g.reveal[pid]}">${esc(T.ROLES[g.reveal[pid]].titulo)}</span>` : '';
+    return `<div class="${cls}" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%">
+      <div class="cara">${A.avatar(nombre(pid))}${marcas.join('')}${!g.alive[pid] ? '<span class="sello-out">OUT</span>' : ''}</div>
+      ${pid === st.pid ? '<span class="vos">VOS</span>' : ''}
+      <div class="nom">${esc(nombre(pid))}</div>
+      ${estado}${rev}
+    </div>`;
+  }).join('');
+  return `<section class="mesa-zona" aria-label="Mesa de campaña">
+    <div class="mesa n${n}">
+      <svg class="mesa-arte" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <ellipse cx="50" cy="50" rx="30" ry="28" class="mesa-tabla"/>
+        <ellipse cx="50" cy="50" rx="26.5" ry="24.5" class="mesa-pano"/>
+        <path d="M50 14 A36 34 0 0 1 84 44" class="mesa-giro"/>
+        <path d="M84 44 l-3.5 -3 M84 44 l1.6 -4.2" class="mesa-giro punta"/>
+      </svg>
+      <div class="mesa-centro">${centroMesa(g)}</div>
+      ${asientos}
+    </div>
+    <p class="mesa-ayuda">El cargo de Jefe rota en el sentido de la flecha ↻ · 🪪 Jefe · 🎤 Vocero · 🎙️ habla</p>
   </section>`;
+}
+
+function proximoCandidato(g) {
+  if (g.special) return g.special;
+  const orden = lista(g.order);
+  for (let k = 1; k <= orden.length; k++) {
+    const p = orden[((g.rotation || 0) + k) % orden.length];
+    if (g.alive[p]) return p;
+  }
+  return null;
+}
+
+function centroMesa(g) {
+  const n = (p) => `<b>${esc(nombre(p))}</b>`;
+  const vivos = lista(g.order).filter((p) => g.alive[p]);
+  const votaron = vivos.filter((p) => g.voted && g.voted[p]).length;
+  const textos = {
+    nominate: `<span class="c-ico">🪪</span>${n(g.candidate)}<small>elige Vocero</small>`,
+    debate: g.debate ? `<span class="c-ico">🎙️</span>Habla ${n(lista(g.debate.order)[g.debate.idx])}<small><span data-fin="${g.debate.turnEnd}">${relojTexto(g.debate.turnEnd)}</span> s</small>` : '',
+    vote: `<span class="c-ico">🗳️</span>Votación<small>${votaron} de ${vivos.length} boletas</small>`,
+    chiefDiscard: `<span class="c-ico">📂</span>${n(g.chief)}<small>revisa 3 expedientes</small>`,
+    voceroDiscard: `<span class="c-ico">🎤</span>${n(g.vocero)}<small>decide qué publicar</small>`,
+    vetoReply: `<span class="c-ico">⛔</span>¡Pedido de veto!<small>decide ${esc(nombre(g.chief))}</small>`,
+    declare: `<span class="c-ico">🗣️</span>Declaraciones<small>del Jefe y el Vocero</small>`,
+    power: `<span class="c-ico">${A.iconoPoder(g.power)}</span>${(T.PODERES[g.power] || {}).nombre || 'Poder'}<small>lo usa ${esc(nombre(g.chief))}</small>`,
+    ended: `<span class="c-ico">${g.winner === 'campana' ? '🎉' : '🕶️'}</span>${g.winner === 'campana' ? 'Ganó la Campaña' : 'Ganaron los Operadores'}`,
+  };
+  return `<div class="c-ronda">Ronda ${g.round}</div>${textos[g.phase] || ''}`;
 }
 
 const esperando = (texto) => `<div class="espera-msg"><div class="rosca"></div><p>${texto}</p><small>${T.ESPERAS[Math.floor(Date.now() / 8000) % T.ESPERAS.length]}</small></div>`;
