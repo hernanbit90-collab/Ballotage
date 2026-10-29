@@ -546,7 +546,7 @@ a.btn.link { text-align: center; }
 .poder-txt, .meta-txt { overflow-wrap: anywhere; hyphens: auto; }
 .afiche, .diario { transform: none; }
 .cuerpo { display: flex; flex-direction: column; }
-.cronica { margin-bottom: 14px; }
+.cronica { margin: 14px 0 0; }
 
 @media (max-width: 370px) {
   .afiche-tit, .diario-nom { font-size: 1.35rem; }
@@ -580,7 +580,7 @@ a.btn.link { text-align: center; }
    y a la derecha la acción, la crónica y los tableros. */
 @media (min-width: 1000px) {
   #app.juego { max-width: 1280px; }
-  .cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "mesa accion" "mesa cronica" "mesa tablero"; grid-template-rows: auto auto 1fr; column-gap: 28px; align-items: start; }
+  .cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "mesa accion" "mesa tablero" "mesa cronica"; grid-template-rows: auto auto 1fr; column-gap: 28px; align-items: start; }
   .cuerpo > .accion { grid-area: accion; }
   .cuerpo > .mesa-zona { grid-area: mesa; position: sticky; top: 12px; margin: 0; }
   .cuerpo > .cronica { grid-area: cronica; }

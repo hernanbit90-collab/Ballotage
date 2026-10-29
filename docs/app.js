@@ -462,11 +462,11 @@ function pantallaJuego() {
     <div class="cuerpo">
       <section class="accion">${terminado ? '' : g.phase === 'ended' ? esperando('Contando los votos del escrutinio…') : panelAccion(g)}</section>
       ${filaJugadores(g)}
+      ${tablero(g)}
       <section class="cronica">
         <h3>📰 Último momento</h3>
         <ul>${lista(g.log).slice(-4).reverse().map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
       </section>
-      ${tablero(g)}
     </div>
   `;
   dibujarModal();
