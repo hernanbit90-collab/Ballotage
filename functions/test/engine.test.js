@@ -303,3 +303,12 @@ test('quien no vota a tiempo cuenta como Sí', () => {
   S = jugar(S, b, { type: 'voteTimeout' }, rnd, 22000);
   assert.strictEqual(S.pub.game.phase, 'chiefDiscard');
 });
+
+test('cada jugador puede elegir su personaje', () => {
+  const S = E.crearSala('ABCD', 'u1', 'A', 0);
+  const look = { piel: 2, pelo: 5, colorPelo: 1, lentes: 1, cara: 0, gorro: 3, ropa: 7, fondo: 4 };
+  E.aplicar(S, 'p1', { type: 'look', look }, semilla(1));
+  assert.deepStrictEqual(S.pub.players.p1.look, look);
+  assert.throws(() => E.aplicar(S, 'p1', { type: 'look', look: Object.assign({}, look, { pelo: 99 }) }, semilla(1)), /inválido/);
+  assert.throws(() => E.aplicar(S, 'p1', { type: 'look', look: { piel: 1 } }, semilla(1)), /inválido/);
+});
