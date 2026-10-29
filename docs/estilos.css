@@ -530,3 +530,67 @@ a.btn.link { text-align: center; }
 .muestra-cara .avatar { width: 52px; height: 52px; }
 .muestra-cara small { font-size: .62rem; font-weight: 600; color: var(--tinta); }
 .muestra-cara.elegida { border-color: var(--fucsia); background: #ffe6f1; }
+
+/* =================================================================
+   Tamaños de pantalla
+   Celular: una columna. Tablet parada: una columna más ancha.
+   PC y tablet acostada: dos columnas (acción y mesa | crónica y tableros).
+   ================================================================= */
+
+/* Que nada del tablero empuje el ancho de la pantalla en celulares chicos. */
+.tablero, .tablero > *, .afiche, .diario, .fila-baja > *, .cuerpo, .cuerpo > * { min-width: 0; }
+.casilleros.cinco { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.casilleros.seis { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.fila-baja { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); }
+.casillero { overflow: hidden; }
+.poder-txt, .meta-txt { overflow-wrap: anywhere; hyphens: auto; }
+.afiche, .diario { transform: none; }
+.cuerpo { display: flex; flex-direction: column; }
+.cronica { margin-bottom: 14px; }
+
+@media (max-width: 370px) {
+  .afiche-tit, .diario-nom { font-size: 1.35rem; }
+  .diario-sub, .afiche-sub { font-size: .58rem; }
+  .casilleros { gap: 4px; }
+  .poder-txt { font-size: .5rem; }
+  .ico-poder { width: 24px; height: 24px; }
+  .asiento { width: 70px; }
+  .asiento .avatar { width: 38px; height: 38px; }
+  .mesa.n9 .asiento, .mesa.n10 .asiento { width: 60px; }
+  .mesa.n9 .asiento .avatar, .mesa.n10 .asiento .avatar { width: 32px; height: 32px; }
+  .cartel { font-size: .66rem; padding: 2px 7px 3px; }
+  .boleta-arte { max-height: 110px; }
+}
+
+/* Tablet parada */
+@media (min-width: 700px) {
+  #app.juego { max-width: 700px; }
+  .mesa { max-width: 540px; }
+  .asiento { width: 92px; font-size: .8rem; }
+  .asiento .avatar { width: 52px; height: 52px; }
+  .asiento .nom { max-width: 92px; }
+  .mesa.n9 .asiento, .mesa.n10 .asiento { width: 80px; }
+  .mesa.n9 .asiento .avatar, .mesa.n10 .asiento .avatar { width: 44px; height: 44px; }
+  .mesa-centro { font-size: 1rem; }
+  .mesa-centro b { font-size: 1.25rem; }
+  .cartel { font-size: .85rem; }
+}
+
+/* PC y tablet acostada: la mesa grande a la izquierda (todo el alto),
+   y a la derecha la acción, la crónica y los tableros. */
+@media (min-width: 1000px) {
+  #app.juego { max-width: 1280px; }
+  .cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "mesa accion" "mesa cronica" "mesa tablero"; grid-template-rows: auto auto 1fr; column-gap: 28px; align-items: start; }
+  .cuerpo > .accion { grid-area: accion; }
+  .cuerpo > .mesa-zona { grid-area: mesa; position: sticky; top: 12px; margin: 0; }
+  .cuerpo > .cronica { grid-area: cronica; }
+  .cuerpo > .tablero { grid-area: tablero; width: 100%; max-width: 540px; justify-self: center; }
+  .mesa { max-width: min(620px, calc(100vh - 120px)); }
+  .final { margin-bottom: 20px; }
+  .roles-finales { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+}
+
+/* Pantallas bajitas y anchas (tablet acostada): la mesa un poco más chica. */
+
+.tarjeta .cantidades + h3, .tarjeta .nota + h3 { margin-top: 14px; }
+.tarjeta h3 { margin-bottom: 8px; }
