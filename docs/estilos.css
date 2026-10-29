@@ -469,40 +469,51 @@ a.btn.link { text-align: center; }
 
 /* ---------- Mesa redonda ---------- */
 .mesa-zona { margin: 14px 0; }
-.mesa { position: relative; width: 100%; max-width: 440px; margin: 0 auto; aspect-ratio: 1 / 0.95; }
+.mesa { position: relative; width: 100%; max-width: 440px; margin: 0 auto; aspect-ratio: 1 / 0.98; }
 .mesa-arte { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .mesa-tabla { fill: #7a4a2a; stroke: #4e2d17; stroke-width: 1.2; }
 .mesa-pano { fill: #1f7a5a; stroke: rgba(255, 255, 255, .25); stroke-width: .5; stroke-dasharray: 1.5 1; }
-.mesa-giro { fill: none; stroke: var(--amarillo); stroke-width: .8; stroke-dasharray: 2 1.6; opacity: .8; }
-.mesa-giro.punta { stroke-dasharray: none; stroke-linecap: round; stroke-width: 1; }
-.mesa-centro { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 46%; text-align: center; color: #fff; font-weight: 600; font-size: .9rem; line-height: 1.2; display: flex; flex-direction: column; align-items: center; gap: 2px; text-shadow: 0 1px 2px rgba(0, 0, 0, .4); }
+.mesa-formula { stroke: var(--amarillo); stroke-dasharray: 6 5; opacity: .55; vector-effect: non-scaling-stroke; stroke-width: 3px; stroke-linecap: round; }
+.giro { position: absolute; font-size: .7rem; color: #e8c79b; opacity: .9; pointer-events: none; z-index: 0; line-height: 1; }
+.mesa-centro { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 42%; background: rgba(15, 70, 50, .85); border-radius: 18px; padding: 6px 4px; text-align: center; color: #fff; font-weight: 600; font-size: .9rem; line-height: 1.2; display: flex; flex-direction: column; align-items: center; gap: 2px; text-shadow: 0 1px 2px rgba(0, 0, 0, .5); z-index: 0; }
 .mesa-centro b { font-family: var(--fuente-titulo); font-weight: 400; font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; max-width: 100%; white-space: nowrap; }
 .mesa-centro small { font-size: .75rem; opacity: .9; }
 .mesa-centro .c-ico { font-size: 1.5rem; line-height: 1; }
 .mesa-centro .c-ico .ico-poder { width: 30px; height: 30px; }
 .c-ronda { font-size: .62rem; letter-spacing: 2px; text-transform: uppercase; opacity: .75; }
-.asiento { position: absolute; transform: translate(-50%, -50%); width: 78px; display: flex; flex-direction: column; align-items: center; text-align: center; font-size: .72rem; z-index: 1; }
-.asiento .cara { position: relative; border-radius: 50%; padding: 3px; background: var(--noche-2); box-shadow: 0 3px 0 rgba(0, 0, 0, .3); }
+
+.asiento { position: absolute; transform: translate(-50%, -50%); width: 80px; display: flex; flex-direction: column; align-items: center; text-align: center; font-size: .72rem; z-index: 1; }
+.asiento .cara { position: relative; border-radius: 50%; padding: 3px; background: var(--noche-2); box-shadow: 0 3px 0 rgba(0, 0, 0, .3); transition: transform .2s; }
 .asiento .avatar { width: 42px; height: 42px; }
-.asiento .nom { font-weight: 700; margin-top: 2px; max-width: 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: rgba(27, 20, 70, .75); padding: 0 5px; border-radius: 6px; }
-.asiento .nom em { font-weight: 400; opacity: .8; }
+.asiento .nom { font-weight: 700; margin-top: 2px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: rgba(27, 20, 70, .8); padding: 0 5px; border-radius: 6px; }
 .asiento .vos { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); background: var(--fucsia); color: #fff; font-size: .55rem; font-weight: 800; letter-spacing: 1px; padding: 0 5px; border-radius: 99px; z-index: 2; }
-.asiento.es-jefe .cara { background: var(--amarillo); box-shadow: 0 0 0 3px var(--amarillo), 0 3px 0 rgba(0, 0, 0, .3); }
-.asiento.es-vocero .cara { background: var(--cielo); box-shadow: 0 0 0 3px var(--cielo), 0 3px 0 rgba(0, 0, 0, .3); }
-.asiento.hablando .cara { box-shadow: 0 0 0 4px var(--fucsia), 0 0 16px var(--fucsia); animation: pulso-asiento 1.2s infinite; }
-@keyframes pulso-asiento { 50% { transform: scale(1.08); } }
+
+/* Carteles de cargo */
+.asiento.es-jefe, .asiento.es-vocero { z-index: 3; }
+.asiento.es-jefe .cara { background: var(--amarillo); box-shadow: 0 0 0 3px var(--amarillo), 0 0 18px rgba(255, 210, 63, .7); transform: scale(1.12); }
+.asiento.es-vocero .cara { background: var(--cielo); box-shadow: 0 0 0 3px var(--cielo), 0 0 18px rgba(76, 201, 240, .7); transform: scale(1.12); }
+.cartel { display: flex; flex-direction: column; align-items: center; margin-top: 3px; padding: 2px 9px 3px; font-family: var(--fuente-titulo); font-size: .74rem; letter-spacing: .5px; line-height: 1.05; color: var(--tinta); white-space: nowrap; clip-path: polygon(0 0, 100% 0, 92% 50%, 100% 100%, 0 100%, 8% 50%); box-shadow: 0 3px 0 rgba(0, 0, 0, .3); animation: cartel-entra .4s cubic-bezier(.2, 1.6, .4, 1); }
+.cartel small { font-family: var(--fuente); font-size: .5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: .8; }
+.cartel.jefe { background: var(--amarillo); }
+.cartel.vocero { background: var(--cielo); }
+@keyframes cartel-entra { from { transform: scale(.3) rotate(-8deg); opacity: 0; } }
+
+.asiento.hablando .cara { box-shadow: 0 0 0 4px var(--fucsia), 0 0 18px var(--fucsia); animation: pulso-asiento 1.2s infinite; }
+@keyframes pulso-asiento { 50% { transform: scale(1.14); } }
 .asiento.offline .cara { opacity: .45; }
 .asiento.offline .nom::after { content: ' 📵'; }
 .asiento.muerto { filter: grayscale(1); opacity: .65; }
 .asiento .sello-out { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-18deg); background: var(--rojo); color: #fff; font-size: .55rem; font-weight: 800; padding: 0 4px; border-radius: 3px; letter-spacing: 1px; }
-.asiento .marca { position: absolute; right: -12px; bottom: -6px; top: auto; left: auto; }
-.asiento .marca.vocero { left: -12px; right: auto; }
-.asiento .marca.habla { top: -10px; left: -8px; bottom: auto; right: auto; font-size: 1rem; }
-.asiento .marca .ico-cargo { width: 20px; height: 26px; }
-.asiento .voto-ok, .asiento .voto-esp, .asiento .limite, .asiento .proximo { display: block; font-size: .62rem; margin-top: 1px; }
+.asiento .marca.habla { position: absolute; top: -10px; left: -10px; font-size: 1rem; }
+.asiento .voto-ok, .asiento .voto-esp, .asiento .limite, .asiento .proximo { display: block; font-size: .62rem; margin-top: 2px; }
 .asiento .proximo { color: var(--amarillo); font-weight: 700; }
 .asiento .rol-final { font-size: .58rem; }
-.mesa.n9 .asiento, .mesa.n10 .asiento { width: 66px; }
+.mesa.n9 .asiento, .mesa.n10 .asiento { width: 68px; }
 .mesa.n9 .asiento .avatar, .mesa.n10 .asiento .avatar { width: 36px; height: 36px; }
-.mesa.n9 .asiento .nom, .mesa.n10 .asiento .nom { max-width: 66px; }
-.mesa-ayuda { text-align: center; font-size: .72rem; opacity: .75; margin: 2px 0 0; }
+.mesa.n9 .asiento .nom, .mesa.n10 .asiento .nom { max-width: 68px; }
+.mesa.n9 .cartel, .mesa.n10 .cartel { font-size: .64rem; padding: 2px 7px 3px; }
+.mesa-ayuda { text-align: center; font-size: .72rem; opacity: .75; margin: 4px 0 0; }
+@media (prefers-reduced-motion: reduce) { .cartel, .asiento.hablando .cara { animation: none; } }
+.asiento.es-jefe { z-index: 4; }
+.cartel.cand.jefe { background: repeating-linear-gradient(-45deg, var(--amarillo) 0 6px, #ffe486 6px 12px); }
+.cartel.cand.vocero { background: repeating-linear-gradient(-45deg, var(--cielo) 0 6px, #9be3f7 6px 12px); }

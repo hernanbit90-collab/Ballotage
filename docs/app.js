@@ -472,49 +472,76 @@ function filaJugadores(g) {
   const n = orden.length;
   const habla = g.phase === 'debate' && g.debate ? lista(g.debate.order)[g.debate.idx] : null;
   const enEleccion = ['nominate', 'debate', 'vote'].includes(g.phase);
+  const jefe = enEleccion ? g.candidate : g.chief;
+  const vocero = enEleccion ? g.nominee : g.vocero;
   const proximo = proximoCandidato(g);
+  // Arranca arriba y gira en el sentido de las agujas del reloj.
+  const angulo = (i) => ((-90 + (360 * i) / n) * Math.PI) / 180;
+  const lugar = (i, rx, ry) => [50 + rx * Math.cos(angulo(i)), 50 + ry * Math.sin(angulo(i))];
+  const pos = orden.map((_, i) => lugar(i, 37, 39));
+
   const asientos = orden.map((pid, i) => {
-    // Arranca arriba y gira en el sentido de las agujas del reloj.
-    const ang = (-90 + (360 * i) / n) * (Math.PI / 180);
-    const x = 50 + 41 * Math.cos(ang);
-    const y = 50 + 39 * Math.sin(ang);
+    const [x, y] = pos[i];
+    const esJefe = pid === jefe && jefe;
+    const esVocero = pid === vocero && vocero;
     const cls = [
       'asiento',
       !g.alive[pid] ? 'muerto' : '',
       pid === st.pid ? 'yo' : '',
       st.presence[pid] ? '' : 'offline',
       pid === habla ? 'hablando' : '',
-      (enEleccion ? pid === g.candidate : pid === g.chief) ? 'es-jefe' : '',
-      (enEleccion ? pid === g.nominee : pid === g.vocero) ? 'es-vocero' : '',
+      esJefe ? 'es-jefe' : '',
+      esVocero ? 'es-vocero' : '',
     ].join(' ');
-    const marcas = [];
-    if (enEleccion ? pid === g.candidate : pid === g.chief && g.chief) marcas.push(`<span class="marca jefe" title="${enEleccion ? 'Candidato a Jefe' : 'Jefe de Campaña'}">${A.credencial(enEleccion)}</span>`);
-    if (enEleccion ? pid === g.nominee && g.nominee : pid === g.vocero && g.vocero) marcas.push(`<span class="marca vocero" title="${enEleccion ? 'Candidato a Vocero' : 'Vocero'}">${A.microfono(enEleccion)}</span>`);
-    if (pid === habla) marcas.push('<span class="marca habla" title="Está hablando">🎙️</span>');
+    // Mientras se vota es candidato (cartel a rayas); con la mesa llena, en una sola línea.
+    const hacerCartel = (tipo, texto) => {
+      const previo = enEleccion && n < 8 ? '<small>candidato a</small>' : '';
+      return `<span class="cartel ${tipo}${enEleccion ? ' cand' : ''}">${previo}${texto}</span>`;
+    };
+    let cartel = '';
+    if (esJefe) cartel = hacerCartel('jefe', '🪪 JEFE');
+    else if (esVocero) cartel = hacerCartel('vocero', '🎤 VOCERO');
     let estado = '';
     if (g.phase === 'vote' && g.alive[pid]) estado = g.voted && g.voted[pid] ? '<span class="voto-ok">✔ votó</span>' : '<span class="voto-esp">votando…</span>';
     else if (g.phase === 'nominate' && g.alive[pid] && pid !== g.candidate && !puedeSerVocero(g, pid)) estado = '<span class="limite">no elegible</span>';
-    else if (pid === proximo && g.phase !== 'ended' && pid !== g.candidate) estado = '<span class="proximo">próximo Jefe</span>';
+    else if (pid === proximo && g.phase !== 'ended' && !esJefe) estado = '<span class="proximo">⏭ próximo Jefe</span>';
     const rev = g.reveal ? `<span class="rol-final ${g.reveal[pid]}">${esc(T.ROLES[g.reveal[pid]].titulo)}</span>` : '';
     return `<div class="${cls}" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%">
-      <div class="cara">${A.avatar(nombre(pid))}${marcas.join('')}${!g.alive[pid] ? '<span class="sello-out">OUT</span>' : ''}</div>
       ${pid === st.pid ? '<span class="vos">VOS</span>' : ''}
+      <div class="cara">${A.avatar(nombre(pid))}${pid === habla ? '<span class="marca habla" title="Está hablando">🎙️</span>' : ''}${!g.alive[pid] ? '<span class="sello-out">OUT</span>' : ''}</div>
       <div class="nom">${esc(nombre(pid))}</div>
-      ${estado}${rev}
+      ${cartel}${estado}${rev}
     </div>`;
   }).join('');
+
+  // Flechitas sobre el borde de la mesa: muestran hacia dónde pasa el cargo.
+  const flechas = orden.map((_, i) => {
+    const medio = i + 0.5;
+    const ang = (-90 + (360 * medio) / n);
+    const x = 50 + 30.5 * Math.cos((ang * Math.PI) / 180);
+    const y = 50 + 28.5 * Math.sin((ang * Math.PI) / 180);
+    return `<span class="giro" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%;transform:translate(-50%,-50%) rotate(${(ang + 90).toFixed(0)}deg)">➤</span>`;
+  }).join('');
+
+  // La fórmula: una línea dorada une al Jefe con el Vocero.
+  const ij = orden.indexOf(jefe);
+  const iv = orden.indexOf(vocero);
+  const formula = ij >= 0 && iv >= 0 && g.phase !== 'ended'
+    ? `<line x1="${pos[ij][0].toFixed(1)}" y1="${pos[ij][1].toFixed(1)}" x2="${pos[iv][0].toFixed(1)}" y2="${pos[iv][1].toFixed(1)}" class="mesa-formula"/>`
+    : '';
+
   return `<section class="mesa-zona" aria-label="Mesa de campaña">
     <div class="mesa n${n}">
       <svg class="mesa-arte" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-        <ellipse cx="50" cy="50" rx="30" ry="28" class="mesa-tabla"/>
-        <ellipse cx="50" cy="50" rx="26.5" ry="24.5" class="mesa-pano"/>
-        <path d="M50 14 A36 34 0 0 1 84 44" class="mesa-giro"/>
-        <path d="M84 44 l-3.5 -3 M84 44 l1.6 -4.2" class="mesa-giro punta"/>
+        <ellipse cx="50" cy="50" rx="32" ry="30" class="mesa-tabla"/>
+        <ellipse cx="50" cy="50" rx="27" ry="25" class="mesa-pano"/>
+        ${formula}
       </svg>
+      ${flechas}
       <div class="mesa-centro">${centroMesa(g)}</div>
       ${asientos}
     </div>
-    <p class="mesa-ayuda">El cargo de Jefe rota en el sentido de la flecha ↻ · 🪪 Jefe · 🎤 Vocero · 🎙️ habla</p>
+    <p class="mesa-ayuda">Las flechitas del borde muestran hacia dónde pasa el cargo de Jefe.</p>
   </section>`;
 }
 
