@@ -458,13 +458,15 @@ function pantallaJuego() {
     ${avisoAnfitrion()}
     ${!vivo && !terminado ? `<div class="aviso fantasma">👻 Te hicieron un Carpetazo. Ya no votás ni hablás: mirá en silencio.</div>` : ''}
     ${terminado ? pantallaFinal(g) : ''}
-    <section class="accion">${terminado ? '' : g.phase === 'ended' ? esperando('Contando los votos del escrutinio…') : panelAccion(g)}</section>
-    ${filaJugadores(g)}
-    <section class="cronica">
-      <h3>📰 Último momento</h3>
-      <ul>${lista(g.log).slice(-4).reverse().map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
-    </section>
-    ${tablero(g)}
+    <div class="cuerpo">
+      <section class="accion">${terminado ? '' : g.phase === 'ended' ? esperando('Contando los votos del escrutinio…') : panelAccion(g)}</section>
+      ${filaJugadores(g)}
+      <section class="cronica">
+        <h3>📰 Último momento</h3>
+        <ul>${lista(g.log).slice(-4).reverse().map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
+      </section>
+      ${tablero(g)}
+    </div>
   `;
   dibujarModal();
   if (!st.rolVisto && st.priv && st.priv.role && g.phase !== 'ended') {
