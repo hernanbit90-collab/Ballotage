@@ -38,7 +38,7 @@ export const logo = () => `<div class="logo-arte">
     <g transform="rotate(-4 160 60)">
       <rect x="18" y="22" width="284" height="74" rx="10" fill="#fff8e7" stroke="#1b1446" stroke-width="5"/>
       <rect x="18" y="22" width="284" height="16" rx="6" fill="#ff2e88"/>
-      <text x="160" y="84" text-anchor="middle" font-family="Bowlby One, Arial Black, sans-serif" font-size="44" fill="#1b1446" letter-spacing="1">BALLOTAGE</text>
+      <text x="160" y="84" text-anchor="middle" font-family="Bowlby One, Arial Black, sans-serif" font-size="44" fill="#1b1446" letter-spacing="1" textLength="248" lengthAdjust="spacingAndGlyphs">BALLOTAGE</text>
       <g transform="translate(270 4) rotate(14)">
         <rect width="34" height="44" rx="3" fill="#ffd23f" stroke="#1b1446" stroke-width="4"/>
         <path d="M8 22l7 8 12-16" stroke="#ff2e88" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
@@ -434,7 +434,7 @@ export function tableroEscandalos(n, board, jugadores, frases) {
     <div class="diario">
       <div class="diario-cab">
         <span class="diario-nom">EL BOCHINCHE</span>
-        <span class="diario-sub">Diario sensacionalista · Edición ${edicion} jugadores · ${n}/6 escándalos</span>
+        <span class="diario-sub"><span class="solo-ancho">Diario sensacionalista · </span>Edición ${edicion} jugadores · ${n}/6 escándalos</span>
       </div>
       <div class="casilleros seis">${casillas}</div>
       <div class="zona-roja ${n >= 3 ? 'activa' : ''}"><span>⚠ ZONA ROJA</span> desde el 3.er Escándalo: si El Topo es Vocero, ganan los Operadores</div>

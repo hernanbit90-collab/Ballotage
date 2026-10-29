@@ -183,17 +183,21 @@ function pantallaPractica() {
       <h3>¿Cuántos en la mesa?</h3>
       <div class="cantidades">${[5, 6, 7, 8, 9, 10].map((n) => `<button class="btn cant ${n === 7 ? 'elegida' : ''}" data-act="cantidad" data-n="${n}">${n}</button>`).join('')}</div>
       <p class="nota">Vos + bots que votan, mienten y se hacen los distraídos.</p>
-      <h3>🎙️ Segundos de debate por persona</h3>
+      <h3>🎙️ Debate por persona (segundos)</h3>
       <div class="cantidades">${[0, 15, 30, 45, 60, 90].map((t) => `<button class="btn cant deb ${t === 30 ? 'elegida' : ''}" data-act="cantidadDeb" data-t="${t}">${t || 'Sin'}</button>`).join('')}</div>
       <h3>⏱️ Segundos para votar</h3>
       <div class="cantidades">${[0, 20, 30, 45, 60, 90].map((t) => `<button class="btn cant vot ${t === 30 ? 'elegida' : ''}" data-act="cantidadVot" data-t="${t}">${t || 'Sin'}</button>`).join('')}</div>
       <p class="nota">Si no votás a tiempo, tu boleta cuenta como ¡Sí!</p>
     </div>
-    <button class="btn grande secundario" data-act="editarPersonaje">🎨 Armar mi personaje</button>
-    <button class="btn chico" data-act="probarMicro">🎙️ Probar mi micrófono</button>
     <button class="btn grande primario" data-act="practicar">¡Largar la campaña!</button>
-    <button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button>
-    ${configurado ? `<a class="btn link" href="${location.pathname}">🌐 Jugar online con amigos</a>` : ''}
+    <div class="fila-btns">
+      <button class="btn fantasma" data-act="editarPersonaje">🎨 Mi personaje</button>
+      <button class="btn fantasma" data-act="probarMicro">🎙️ Probar micro</button>
+    </div>
+    <div class="links">
+      <button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button>
+      ${configurado ? `<a class="btn link" href="${location.pathname}">🌐 Jugar online con amigos</a>` : ''}
+    </div>
   `;
 }
 
@@ -244,8 +248,10 @@ function pantallaLogin(modo = 'entrar') {
         ${olvido ? '<button class="btn link" type="button" data-act="login" data-m="entrar">Volver</button>' : ''}
       </div>
     </form>
-    <button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button>
-    <a class="btn link" href="?practica">🤖 Practicar contra bots (sin cuenta)</a>
+    <div class="links">
+      <button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button>
+      <a class="btn link" href="?practica">🤖 Practicar contra bots (sin cuenta)</a>
+    </div>
   `;
   document.getElementById('form-login').addEventListener('submit', async (ev) => {
     ev.preventDefault();
@@ -312,8 +318,10 @@ function pantallaInicio() {
     </div>
     <div class="o">o</div>
     <button class="btn grande secundario" data-act="crear">Crear sala nueva</button>
-    <button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button>
-    <a class="btn link" href="?practica">🤖 Practicar contra bots</a>
+    <div class="links">
+      <button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button>
+      <a class="btn link" href="?practica">🤖 Practicar contra bots</a>
+    </div>
   `;
   const codigoInput = document.getElementById('codigo');
   codigoInput.addEventListener('input', () => {
@@ -386,8 +394,7 @@ function pantallaEspera() {
     </div>
     ${avisoAnfitrion()}
     ${GRATIS && soyHost ? '<p class="nota">📱 Sos el anfitrión: <b>dejá el juego abierto en tu celular</b> mientras juegan (tu celular hace de árbitro).</p>' : ''}
-    <h2>Militantes en el búnker <small>${n}/10</small></h2>
-    <button class="btn grande secundario" data-act="editarPersonaje">🎨 Armar mi personaje</button>
+    <div class="titulo-sala"><h2>Militantes en el búnker</h2><small>${n}/10</small></div>
     <ul class="lista-jugadores">
       ${pids.map((pid) => `
         <li>
@@ -398,6 +405,7 @@ function pantallaEspera() {
           ${soyHost && pid !== st.pid && !PRACTICA ? `<button class="btn chico peligro" data-act="echar" data-pid="${pid}">Sacar</button>` : ''}
         </li>`).join('')}
     </ul>
+    <button class="btn fantasma grande" data-act="editarPersonaje">🎨 Armar mi personaje</button>
     ${panelAjustes(p, soyHost)}
     ${n < 5 ? `<p class="nota">Faltan ${5 - n} para arrancar (mínimo 5, máximo 10).</p>` : ''}
     ${soyHost
@@ -411,28 +419,26 @@ function panelAjustes(p, soyHost) {
   const c = Object.assign({ debate: 30, declare: true, voteTime: 30 }, p.settings || {});
   const tiempos = [0, 15, 30, 45, 60, 90];
   const txt = (t) => (t ? t + ' s' : 'Sin');
+  // Cada ajuste: título (y el valor, si no sos anfitrión), una línea de ayuda y el selector.
+  const ajuste = (titulo, valor, ayuda, control, extra = '') => `<div class="ajuste">
+      <div class="ajuste-cab"><h3>${titulo}</h3>${soyHost ? '' : `<span class="valor">${valor}</span>`}</div>
+      <p class="nota izq">${ayuda}</p>
+      ${soyHost ? control : ''}${extra}
+    </div>`;
   return `<div class="tarjeta ajustes">
-    <h3>🎙️ Debate antes de cada votación</h3>
-    <p class="nota izq">Cada jugador en carrera tiene su turno para hablar, con reloj. Primero la fórmula, después el resto.</p>
-    ${soyHost
-      ? `<div class="cantidades">${tiempos.map((t) => `<button class="btn cant ${c.debate === t ? 'elegida' : ''}" data-act="ajuste" data-debate="${t}">${txt(t)}</button>`).join('')}</div>`
-      : `<p><b>${c.debate ? c.debate + ' segundos por persona' : 'Sin debate'}</b></p>`}
-    <h3>⏱️ Tiempo para votar</h3>
-    <p class="nota izq">Quien no vota antes de que se termine el reloj, cuenta como <b>¡Sí!</b>.</p>
-    ${soyHost
-      ? `<div class="cantidades">${[0, 20, 30, 45, 60, 90].map((t) => `<button class="btn cant ${c.voteTime === t ? 'elegida' : ''}" data-act="ajuste" data-vote="${t}">${t ? t + ' s' : 'Sin'}</button>`).join('')}</div>`
-      : `<p><b>${c.voteTime ? c.voteTime + ' segundos' : 'Sin límite'}</b></p>`}
-    <h3>🎧 Audio en el debate</h3>
-    <p class="nota izq">Cuando te toca hablar, se prende tu micrófono y todos te escuchan desde su celular. Si están juntos o en una llamada, apáguenlo.</p>
-    ${soyHost
-      ? `<div class="dos"><button class="btn cant ${c.voice !== false ? 'elegida' : ''}" data-act="ajuste" data-voice="1">Sí</button><button class="btn cant ${c.voice === false ? 'elegida' : ''}" data-act="ajuste" data-voice="0">No</button></div>`
-      : `<p><b>${c.voice !== false ? 'Sí' : 'No'}</b></p>`}
-    ${c.voice !== false ? '<button class="btn chico" data-act="probarMicro">🎙️ Probar mi micrófono</button>' : ''}
-    <h3>🗣️ Declaraciones</h3>
-    <p class="nota izq">Después de publicar, el Jefe y el Vocero cuentan qué cartas les llegaron. Pueden mentir.</p>
-    ${soyHost
-      ? `<div class="dos"><button class="btn cant ${c.declare ? 'elegida' : ''}" data-act="ajuste" data-declare="1">Sí</button><button class="btn cant ${!c.declare ? 'elegida' : ''}" data-act="ajuste" data-declare="0">No</button></div>`
-      : `<p><b>${c.declare ? 'Sí' : 'No'}</b></p>`}
+    ${ajuste('🎙️ Debate antes de votar', c.debate ? c.debate + ' s por persona' : 'Sin debate',
+    'Cada uno en carrera habla por turno, con reloj. Primero la fórmula.',
+    `<div class="cantidades">${tiempos.map((t) => `<button class="btn cant ${c.debate === t ? 'elegida' : ''}" data-act="ajuste" data-debate="${t}">${txt(t)}</button>`).join('')}</div>`)}
+    ${ajuste('⏱️ Tiempo para votar', c.voteTime ? c.voteTime + ' segundos' : 'Sin límite',
+    'Quien no vota a tiempo cuenta como <b>¡Sí!</b>.',
+    `<div class="cantidades">${[0, 20, 30, 45, 60, 90].map((t) => `<button class="btn cant ${c.voteTime === t ? 'elegida' : ''}" data-act="ajuste" data-vote="${t}">${t ? t + ' s' : 'Sin'}</button>`).join('')}</div>`)}
+    ${ajuste('🎧 Audio en el debate', c.voice !== false ? 'Sí' : 'No',
+    'Cuando te toca, se prende tu micrófono y todos te escuchan. Si están juntos o en una llamada, apáguenlo.',
+    `<div class="dos"><button class="btn cant ${c.voice !== false ? 'elegida' : ''}" data-act="ajuste" data-voice="1">Sí</button><button class="btn cant ${c.voice === false ? 'elegida' : ''}" data-act="ajuste" data-voice="0">No</button></div>`,
+    c.voice !== false ? '<button class="btn chico" data-act="probarMicro">🎙️ Probar mi micrófono</button>' : '')}
+    ${ajuste('🗣️ Declaraciones', c.declare ? 'Sí' : 'No',
+    'Después de publicar, el Jefe y el Vocero cuentan qué cartas les llegaron. Pueden mentir.',
+    `<div class="dos"><button class="btn cant ${c.declare ? 'elegida' : ''}" data-act="ajuste" data-declare="1">Sí</button><button class="btn cant ${!c.declare ? 'elegida' : ''}" data-act="ajuste" data-declare="0">No</button></div>`)}
   </div>`;
 }
 
@@ -447,6 +453,10 @@ function pantallaJuego() {
   const vivo = g.alive[yo];
   // La pantalla final espera a que terminen las animaciones (no spoilear).
   const terminado = g.phase === 'ended' && !capaAbierta;
+  const panel = terminado ? '' : g.phase === 'ended' ? esperando('Contando los votos del escrutinio…') : panelAccion(g);
+  // Si el panel tiene algo para tocar (y no es solo esperar), se resalta: "te toca".
+  const miTurno = panel && !panel.includes('espera-msg') && /data-act="(nominar|votar|descJefe|descVoc|veto|poder|pasarPalabra|declarar)"/.test(panel)
+    && !(g.phase === 'vote' && g.voted && g.voted[yo]) && !(g.phase === 'debate' && lista(g.debate && g.debate.order)[g.debate && g.debate.idx] !== yo);
   $app.className = 'juego';
   $app.innerHTML = `
     <header class="barra">
@@ -460,7 +470,7 @@ function pantallaJuego() {
     ${!vivo && !terminado ? `<div class="aviso fantasma">👻 Te hicieron un Carpetazo. Ya no votás ni hablás: mirá en silencio.</div>` : ''}
     ${terminado ? pantallaFinal(g) : ''}
     <div class="cuerpo">
-      <section class="accion">${terminado ? '' : g.phase === 'ended' ? esperando('Contando los votos del escrutinio…') : panelAccion(g)}</section>
+      <section class="accion${miTurno ? ' mi-turno' : ''}">${panel}</section>
       ${filaJugadores(g)}
       ${tablero(g)}
       <section class="cronica">
@@ -558,7 +568,7 @@ function filaJugadores(g) {
       <div class="mesa-centro">${centroMesa(g)}</div>
       ${asientos}
     </div>
-    <p class="mesa-ayuda">Las flechitas del borde muestran hacia dónde pasa el cargo de Jefe.</p>
+    <p class="mesa-ayuda">➤ Las flechitas muestran hacia dónde rota el cargo de Jefe</p>
   </section>`;
 }
 
@@ -950,7 +960,7 @@ function editorPersonaje() {
   return `<h2>🎨 Tu personaje</h2>
     <div class="vista-personaje">${A.avatar(nom, L)}<b>${esc(nom)}</b></div>
     <p class="nota">Es solo tu cara en la mesa: no tiene nada que ver con el rol que te toque.</p>
-    <button class="btn grande secundario" data-act="lookAzar">🎲 Al azar</button>
+    <button class="btn chico secundario azar" data-act="lookAzar">🎲 Al azar</button>
     ${filas}
     <button class="btn grande primario" data-act="guardarLook">Listo, guardar</button>`;
 }
