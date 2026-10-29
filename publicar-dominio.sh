@@ -22,9 +22,11 @@ fi
 
 paso "Buscando un nombre libre para la dirección"
 SITIO=""
-for N in ${1:-} ballotage ballotage-juego jugaballotage ballotage-online ballotage-ar; do
+# Solo cuentan los sitios de ESTE proyecto (un nombre puede ser de otra persona).
+MIOS="$($FB hosting:sites:list --project "$PROYECTO" --json 2>/dev/null)"
+for N in ${1:-} ballotage ballotage-juego jugaballotage ballotage-online ballotage-ar ballotage-arg; do
   [ -z "$N" ] && continue
-  if $FB hosting:sites:get "$N" --project "$PROYECTO" >/dev/null 2>&1 \
+  if echo "$MIOS" | grep -q "/sites/$N\"" \
      || $FB hosting:sites:create "$N" --project "$PROYECTO" >/dev/null 2>&1; then
     SITIO="$N"; break
   fi
