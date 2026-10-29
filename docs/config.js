@@ -4,13 +4,13 @@
 // Estos datos NO son secretos: está bien que estén a la vista.
 
 export const firebaseConfig = {
-  apiKey: 'PEGAR_ACA',
-  authDomain: 'PEGAR_ACA.firebaseapp.com',
-  databaseURL: 'https://PEGAR_ACA-default-rtdb.firebaseio.com',
-  projectId: 'PEGAR_ACA',
-  storageBucket: 'PEGAR_ACA.appspot.com',
-  messagingSenderId: 'PEGAR_ACA',
-  appId: 'PEGAR_ACA',
+  apiKey: 'AIzaSyCx1oEiU139Y2GgcYMboqFzMz1Vq5VwpBw',
+  authDomain: 'ballotage-4edb5.firebaseapp.com',
+  databaseURL: 'https://ballotage-4edb5-default-rtdb.firebaseio.com',
+  projectId: 'ballotage-4edb5',
+  storageBucket: 'ballotage-4edb5.firebasestorage.app',
+  messagingSenderId: '262767289418',
+  appId: '1:262767289418:web:139f87968b62966d7af2b3',
 };
 
 // Dónde corre el árbitro:
