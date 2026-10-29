@@ -22,17 +22,30 @@ fi
 
 paso "Buscando un nombre libre para la dirección"
 SITIO=""
-# Solo cuentan los sitios de ESTE proyecto (un nombre puede ser de otra persona).
-MIOS="$($FB hosting:sites:list --project "$PROYECTO" --json 2>/dev/null)"
-for N in ${1:-} ballotage ballotage-juego jugaballotage ballotage-online ballotage-ar ballotage-arg; do
+mios() { $FB hosting:sites:list --project "$PROYECTO" --json 2>/dev/null | python3 -c '
+import json, sys
+try:
+    r = json.load(sys.stdin).get("result", {})
+    sitios = r.get("sites", r) if isinstance(r, dict) else r
+    for x in sitios or []:
+        print(x.get("name", "").split("/")[-1])
+except Exception:
+    pass'; }
+echo "  Sitios que ya tiene tu proyecto: $(mios | tr '\n' ' ')"
+for N in ${1:-} ballotage-juego jugaballotage ballotage-online ballotage-arg ballotage-ar; do
   [ -z "$N" ] && continue
-  if echo "$MIOS" | grep -q "/sites/$N\"" \
-     || $FB hosting:sites:create "$N" --project "$PROYECTO" >/dev/null 2>&1; then
-    SITIO="$N"; break
-  fi
-  echo "  $N.web.app está ocupada, pruebo otra…"
+  if mios | grep -qx "$N"; then SITIO="$N"; break; fi
+  SALIDA="$($FB hosting:sites:create "$N" --project "$PROYECTO" 2>&1)"
+  if mios | grep -qx "$N"; then SITIO="$N"; break; fi
+  echo "  No pude usar $N.web.app:"
+  echo "$SALIDA" | grep -iE "error|exist|taken|reserv|plan|billing" | head -3 | sed 's/^/    /'
 done
-[ -n "$SITIO" ] || fallar "No encontré un nombre libre. Probá con uno tuyo: bash publicar-dominio.sh minombre"
+if [ -z "$SITIO" ]; then
+  # Último recurso: la dirección que Firebase le da al proyecto.
+  mios | grep -qx "$PROYECTO" || $FB hosting:sites:create "$PROYECTO" --project "$PROYECTO" >/dev/null 2>&1
+  mios | grep -qx "$PROYECTO" && SITIO="$PROYECTO"
+fi
+[ -n "$SITIO" ] || fallar "No pude crear ninguna dirección. Mandale a Claude una captura de esta pantalla."
 echo "  ¡Conseguida! $SITIO.web.app"
 
 paso "Publicando la página"
