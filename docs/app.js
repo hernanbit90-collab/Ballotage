@@ -190,6 +190,7 @@ function pantallaPractica() {
       <p class="nota">Si no votás a tiempo, tu boleta cuenta como ¡Sí!</p>
     </div>
     <button class="btn grande secundario" data-act="editarPersonaje">🎨 Armar mi personaje</button>
+    <button class="btn chico" data-act="probarMicro">🎙️ Probar mi micrófono</button>
     <button class="btn grande primario" data-act="practicar">¡Largar la campaña!</button>
     <button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button>
     ${configurado ? `<a class="btn link" href="${location.pathname}">🌐 Jugar online con amigos</a>` : ''}
@@ -441,7 +442,7 @@ function pantallaJuego() {
   const g = st.pub.game;
   if (!g) return;
   detectarNovedades(g);
-  if (!PRACTICA) Voz.actualizar(g, st.pub.settings);
+  if (!PRACTICA) Voz.actualizar(g, st.pub.settings, st.pub.host === st.pid);
   const yo = st.pid;
   const vivo = g.alive[yo];
   // La pantalla final espera a que terminen las animaciones (no spoilear).
@@ -695,28 +696,36 @@ function panelDebate(g) {
 
 function panelVoz(habla) {
   if (PRACTICA || (st.pub.settings && st.pub.settings.voice === false)) return '';
+  if (!Voz.soportado()) return '<div class="voz"><span>⚠️ Este navegador no permite audio en vivo. Probá con Chrome o Safari actualizados.</span></div>';
   const v = Voz.estadoActual();
+  const barra = '<span class="vumetro" data-nivel aria-hidden="true"><i></i></span>';
   if (habla === st.pid) {
     const textos = {
       'pidiendo-micro': '🎙️ Prendiendo tu micrófono… si te pregunta, tocá <b>Permitir</b>.',
-      'sin-micro': '⚠️ No pude usar tu micrófono. Revisá el permiso en el navegador (el candadito de arriba) y hablá en voz alta.',
+      'sin-micro': '⚠️ No pude usar tu micrófono. Tocá el candadito 🔒 de la barra de arriba, permití el micrófono y tocá Reintentar.',
       'al-aire': v.callado ? '🔇 Te silenciaste: nadie te escucha.' : '<b>🔴 AL AIRE</b> · todos te están escuchando',
     };
     return `<div class="voz ${v.estado === 'al-aire' && !v.callado ? 'aire' : ''}">
       <span>${textos[v.estado] || '🎙️ Preparando el micrófono…'}</span>
+      ${v.estado === 'al-aire' && !v.callado ? barra : ''}
       ${v.estado === 'al-aire' ? `<button class="btn chico" data-act="callarme">${v.callado ? '🎙️ Volver a hablar' : '🔇 Silenciarme'}</button>` : ''}
+      ${v.estado === 'sin-micro' ? '<button class="btn chico primario" data-act="reintentarVoz">🔄 Reintentar</button>' : ''}
     </div>`;
   }
   const textos = {
     conectando: '🔊 Conectando con el micrófono de ' + esc(nombre(habla)) + '…',
+    reconectando: '🔄 Reconectando el audio de ' + esc(nombre(habla)) + '…',
     escuchando: v.silenciado ? '🔇 Silenciaste el audio.' : '🔊 Escuchando a <b>' + esc(nombre(habla)) + '</b>',
-    'tocar-para-escuchar': '🔈 Tocá el botón para escuchar.',
-    'sin-conexion': '⚠️ No pude conectar el audio con ' + esc(nombre(habla)) + ' (puede ser la red). Que hable en voz alta o por llamada.',
+    'tocar-para-escuchar': '🔈 Tu navegador frenó el sonido: tocá el botón para escuchar.',
+    'sin-conexion': '⚠️ No pude conectar el audio con ' + esc(nombre(habla)) + '. Puede ser la red (pasa con algunos datos móviles): probá con Wi-Fi, reintentá o que hable en voz alta.',
   };
+  let boton = `<button class="btn chico" data-act="silenciarVoz">${v.silenciado ? '🔊 Activar sonido' : '🔇 Silenciar'}</button>`;
+  if (v.estado === 'tocar-para-escuchar') boton = '<button class="btn chico primario" data-act="escucharVoz">🔊 Escuchar</button>';
+  if (v.estado === 'sin-conexion') boton = '<button class="btn chico primario" data-act="reintentarVoz">🔄 Reintentar</button>';
   return `<div class="voz">
     <span>${textos[v.estado] || '🔊 Esperando el audio…'}</span>
-    ${v.estado === 'tocar-para-escuchar' ? '<button class="btn chico primario" data-act="escucharVoz">🔊 Escuchar</button>'
-      : `<button class="btn chico" data-act="silenciarVoz">${v.silenciado ? '🔊 Activar sonido' : '🔇 Silenciar'}</button>`}
+    ${v.estado === 'escuchando' && !v.silenciado ? barra : ''}
+    ${boton}
   </div>`;
 }
 
@@ -951,6 +960,18 @@ function contenidoModal() {
   switch (st.modal) {
     case 'personaje':
       return editorPersonaje();
+    case 'micro': {
+      const textos = {
+        pidiendo: 'Si el navegador te pregunta, tocá <b>Permitir</b>.',
+        'hablá': 'Decí algo en voz alta: la barra se tiene que mover.',
+        'te-escucho': '✅ <b>¡Te escucho perfecto!</b> Cuando te toque hablar en el debate, el micrófono se prende solo.',
+        error: '⚠️ No pude usar el micrófono. Tocá el candadito 🔒 de la barra de direcciones, permití el micrófono y probá de nuevo. En iPhone: Ajustes → Safari → Micrófono → Permitir.',
+      };
+      return `<h2>🎙️ Prueba de micrófono</h2>
+        <p>${textos[st.pruebaMicro] || ''}</p>
+        ${st.pruebaMicro !== 'error' ? '<div class="vumetro grande" data-nivel-prueba><i></i></div>' : '<button class="btn grande primario" data-act="probarMicro">Probar de nuevo</button>'}
+        <p class="nota">Consejo: si juegan en la misma habitación, usen auriculares o bajen el volumen para que no se acople.</p>`;
+    }
     case 'reglas':
       return `<div class="reglas">${A.logoChico()}${T.REGLAS}</div>`;
     case 'rol':
@@ -1209,13 +1230,21 @@ document.addEventListener('click', async (ev) => {
     case 'silenciarVoz': Voz.silenciarAudio(!Voz.estadoActual().silenciado); break;
     case 'escucharVoz': Voz.tocarParaEscuchar(); break;
     case 'probarMicro':
+      st.modal = 'micro';
+      st.pruebaMicro = 'pidiendo';
+      dibujarModal();
       try {
-        await Voz.probarMicrofono();
-        toast('🎙️ ¡Micrófono listo! Cuando te toque hablar se prende solo.');
+        st.pararPrueba = await Voz.probarMicrofono((n) => {
+          document.querySelectorAll('[data-nivel-prueba]').forEach((el) => el.style.setProperty('--nivel', n.toFixed(2)));
+          if (n > 0.12 && st.pruebaMicro !== 'te-escucho') { st.pruebaMicro = 'te-escucho'; dibujarModal(); }
+        });
+        if (st.pruebaMicro === 'pidiendo') { st.pruebaMicro = 'hablá'; dibujarModal(); }
       } catch {
-        toast('No pude usar el micrófono. Tocá el candadito de la barra de direcciones y permitilo.', 'error');
+        st.pruebaMicro = 'error';
+        dibujarModal();
       }
       break;
+    case 'reintentarVoz': Voz.reintentar(); break;
     case 'declarar': jugar({ type: 'declare', proposals: Number(d.n) }); break;
     case 'ajuste':
       jugar(Object.assign({ type: 'settings' },
@@ -1235,6 +1264,7 @@ document.addEventListener('click', async (ev) => {
       dibujarModal();
       break;
     case 'cerrarModal':
+      if (st.pararPrueba) { st.pararPrueba(); st.pararPrueba = null; }
       st.modal = null;
       st.verRol = false;
       dibujarModal();
