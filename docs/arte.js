@@ -269,7 +269,7 @@ export function volante(texto, i, grande) {
     <rect x="32" y="2" width="36" height="12" fill="rgba(255,255,255,.65)" transform="rotate(-4 50 8)"/>
     <text x="50" y="30" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="8.5" fill="#1b1446" letter-spacing="1">PROPUESTA</text>
     <path d="M18 36h64" stroke="#1b1446" stroke-width="2"/>
-    <text x="50" y="${66 - l.length * 6}" text-anchor="middle" font-family="Permanent Marker, Comic Sans MS, cursive" font-size="12.5" fill="#1b1446">${tspans(l, 50, 14)}</text>
+    <text x="50" y="${74 - l.length * 6}" text-anchor="middle" font-family="Permanent Marker, Comic Sans MS, cursive" font-size="${l.length > 3 ? 11.5 : 12.5}" fill="#1b1446">${tspans(l, 50, l.length > 3 ? 13 : 14)}</text>
     <text x="50" y="116" text-anchor="middle" font-family="Rubik, sans-serif" font-size="5.2" font-weight="800" fill="#1b1446">TITO VENTURA · VAMOS VIENDO</text>
   </svg>`;
 }

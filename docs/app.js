@@ -903,8 +903,8 @@ function pantallaFinal(g) {
 
 function tablero(g) {
   return `<section class="tablero">
-    ${A.tableroPropuestas(g.proposals, T.PROPUESTAS)}
-    ${A.tableroEscandalos(g.scandals, lista(g.board), g.n, T.ESCANDALOS)}
+    ${A.tableroPropuestas(g.proposals, frasesDeLaPartida(g, T.PROPUESTAS))}
+    ${A.tableroEscandalos(g.scandals, lista(g.board), g.n, frasesDeLaPartida(g, T.ESCANDALOS))}
     <div class="fila-baja">
       ${A.contadorCrisis(g.crisis || 0)}
       ${A.mesaEntradas(g.deckCount)}
@@ -1022,10 +1022,24 @@ function animarUrna(lv) {
   });
 }
 
+// Cada partida mezcla los textos de las cartas a su manera, pero igual para todos:
+// la semilla sale del código de sala y del orden de la mesa (que se sortea al empezar).
+function frasesDeLaPartida(g, frases) {
+  let h = 7;
+  for (const ch of String(st.code) + lista(g && g.order).join('')) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+  const out = frases.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    h = (h * 1103515245 + 12345) >>> 0;
+    const j = h % (i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 function mostrarPublicacion(tipo, idx, caos) {
   const html = `<div class="publicacion ${tipo === 'P' ? 'prop' : 'esc'}">
     ${caos ? '<div class="cacerolazo">¡Cacerolazo! El pueblo publicó sin poderes</div>' : ''}
-    ${tipo === 'P' ? A.volante(T.PROPUESTAS[idx % T.PROPUESTAS.length], idx, true) : A.titular(T.ESCANDALOS[idx % T.ESCANDALOS.length], true)}
+    ${tipo === 'P' ? A.volante(frasesDeLaPartida(st.pub && st.pub.game, T.PROPUESTAS)[idx], idx, true) : A.titular(frasesDeLaPartida(st.pub && st.pub.game, T.ESCANDALOS)[idx], true)}
     <p>${tipo === 'P' ? '¡Nueva Propuesta publicada!' : '¡Nuevo Escándalo en la tapa!'}</p>
   </div>`;
   const suspenso = `<div class="suspenso">${caos ? '<div class="cacerolazo">¡Cacerolazo!</div>' : ''}<div class="suspenso-ico">🥁</div><p>${caos ? 'El pueblo enojado publica sin poderes…' : 'Se viene la tapa…'}</p></div>`;
