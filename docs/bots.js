@@ -268,6 +268,47 @@ function objetivoPoder(S, c, vivos) {
 
 // ------------------------------------------------------------------ Lo que dicen en el debate
 
+// Comentarios de campaña (inventados, sin partidos ni políticos reales).
+const DE_CAMPANA = [
+  'Esto se gana en la calle, no en el búnker.',
+  'Ya están los choripanes para el cierre, no lo arruinemos.',
+  'Los punteros me dicen que en los barrios estamos bárbaro.',
+  'La encuesta que pagamos nosotros nos da arriba, je.',
+  'Que no se filtre nada a El Bochinche, por favor.',
+  'Hay que bajar al territorio y escuchar a la gente.',
+  'Un micrófono abierto es más peligroso que el rival.',
+  'Para el acto del sábado ya tenemos los bombos y el escenario.',
+  'Menos rosca de pasillo y más propuestas, equipo.',
+  'Acá nadie se baja de la boleta, ¿estamos?',
+  'Tito Ventura nos mira desde el afiche: no lo defraudemos.',
+  'El que filtra un audio, se va de la campaña.',
+  'Con dos Propuestas más, festejamos con asado.',
+];
+const DE_ESCANDALO = [
+  'Otra tapa con escándalo y nos bajan del escenario.',
+  'Esto ya huele a operación de Los de Enfrente.',
+  'Alguien está pasando información al búnker de enfrente.',
+];
+const DE_DISIMULO = [ // lo que dice un Operador para parecer de la campaña
+  'Yo estoy en esta campaña desde la primera pegatina, eh.',
+  'Que me revisen los bolsillos si quieren: no hay bolsos.',
+  'Yo los Escándalos los detesto, me hacen mal a la úlcera.',
+  'Confíen: yo pegué más afiches que nadie en esta mesa.',
+];
+const DE_ZONA_ROJA = [
+  'Zona roja, gente: el que vota mal al Vocero nos hunde.',
+  'Ahora sí: un Vocero equivocado y perdemos la elección.',
+];
+
+function comentario(S, p) {
+  const g = S.pub.game;
+  const op = esOp(S, p);
+  if (g.scandals >= 3 && chance(0.4)) return azar(DE_ZONA_ROJA);
+  if (op && chance(0.45)) return azar(DE_DISIMULO);
+  if (g.scandals > g.proposals && chance(0.5)) return azar(DE_ESCANDALO);
+  return azar(DE_CAMPANA);
+}
+
 function frase(S, mem, p) {
   const g = S.pub.game;
   const j = g.candidate;
@@ -280,9 +321,9 @@ function frase(S, mem, p) {
   const partes = [];
 
   if (p === j) {
-    partes.push(azar([`Confíen en esta fórmula: ${N(v)} viene limpio.`, `Elegí a ${N(v)} porque hasta ahora jugó derecho.`, `Con ${N(v)} de Vocero esto sale bien, palabra.`]));
+    partes.push(azar([`Confíen en esta fórmula: ${N(v)} tiene las manos limpias.`, `Elegí a ${N(v)} porque hasta ahora jugó derecho.`, `Con ${N(v)} de Vocero esto sale bien, palabra.`]));
   } else if (p === v) {
-    partes.push(azar(['Si me votan, publico Propuestas, nada más.', 'Yo cuido el micrófono: conmigo no hay escándalos.', `${N(j)} me eligió porque sabe que soy de fierro.`]));
+    partes.push(azar(['Si me votan, publico Propuestas, nada más.', 'Yo cuido el micrófono: conmigo no hay escándalos.', `${N(j)} me eligió porque sabe que conmigo no se juega.`]));
   }
 
   // A quién apunta: la Campaña al más sospechoso; los Operadores a un inocente.
@@ -302,8 +343,8 @@ function frase(S, mem, p) {
     else if (m.includes('traiciono')) partes.push(`${N(blanco)} dijo que le llegó una Propuesta y publicó un Escándalo. ¿En serio?`);
     else if (m.includes('mintio')) partes.push(`Las declaraciones de ${N(blanco)} no cierran por ningún lado.`);
     else if (veces >= 2) partes.push(`Ojo con ${N(blanco)}: estuvo en ${veces} gobiernos que publicaron Escándalos.`);
-    else if (veces === 1) partes.push(`Yo a ${N(blanco)} lo vengo mirando desde el último Escándalo.`);
-    else if (op) partes.push(azar([`A ${N(blanco)} lo noto muy callado. Sospechoso.`, `${N(blanco)} vota raro, revisen el historial.`]));
+    else if (veces === 1) partes.push(`A ${N(blanco)} le vengo siguiendo los pasos desde el último Escándalo.`);
+    else if (op) partes.push(azar([`${N(blanco)} habla poco y vota raro. Sospechoso.`, `${N(blanco)} vota raro, revisen el historial.`]));
   }
 
   if (p !== j && p !== v) {
@@ -311,5 +352,10 @@ function frase(S, mem, p) {
     partes.push(vota ? azar(['Voy a votar Sí.', 'Le doy una chance: Sí.', 'Por ahora, Sí.']) : azar(['Yo voto No.', 'No me cierra, voto No.', 'Prefiero otra fórmula: No.']));
   }
   if (!partes.length) partes.push(azar(['Hmm… quiero escuchar a los demás.', 'Miren el historial, los votos dicen mucho.']));
-  return partes.join(' ').slice(0, 180);
+  // Un comentario de campaña al principio o al final, para darle color.
+  if (chance(0.7)) {
+    const c = comentario(S, p);
+    if (chance(0.5)) partes.unshift(c); else partes.splice(partes.length - 1, 0, c);
+  }
+  return partes.join(' ').slice(0, 240);
 }
