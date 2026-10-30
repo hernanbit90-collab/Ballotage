@@ -7,6 +7,7 @@ import * as A from './arte.js';
 import * as Practica from './practica.js';
 import * as Anfitrion from './anfitrion.js';
 import * as Voz from './voz.js';
+import * as Son from './sonido.js';
 
 const { firebaseConfig, REGION } = CFG;
 
@@ -169,6 +170,8 @@ function escucharSala(base, pid) {
 // ------------------------------------------------------------------ Pantalla de inicio
 
 function pantallaPractica() {
+  Son.musica('inicio');
+  setTimeout(botonSonido, 0);
   $app.className = 'inicio';
   $app.innerHTML = `
     <div class="portada">
@@ -220,6 +223,8 @@ const ERRORES_AUTH = {
 const errorAuth = (e) => ERRORES_AUTH[e && e.code] || 'No se pudo entrar. Probá de nuevo.';
 
 function pantallaLogin(modo = 'entrar') {
+  Son.musica('inicio');
+  setTimeout(botonSonido, 0);
   $app.className = 'inicio';
   const crear = modo === 'crear';
   const olvido = modo === 'olvido';
@@ -296,6 +301,8 @@ async function entrarConGoogle() {
 }
 
 function pantallaInicio() {
+  Son.musica('inicio');
+  setTimeout(botonSonido, 0);
   if (PRACTICA) return pantallaPractica();
   const yo = auth.currentUser;
   const codigo = (params.get('sala') || '').toUpperCase();
@@ -339,6 +346,18 @@ function apodo() {
   return n;
 }
 
+// Botoncito de sonido en las pantallas de afuera de la partida.
+function botonSonido() {
+  if (st.pub && st.pub.status !== 'lobby') return;
+  if ($app.querySelector('.btn-sonido')) return;
+  const b = document.createElement('button');
+  b.className = 'btn link btn-sonido';
+  b.dataset.act = 'modal';
+  b.dataset.m = 'sonido';
+  b.textContent = Son.preferencias().musica ? '🔊 Música y sonido' : '🔇 Música y sonido';
+  $app.appendChild(b);
+}
+
 // ------------------------------------------------------------------ Dibujo general
 
 function dibujar() {
@@ -370,6 +389,8 @@ function invitacion(link) {
 }
 
 function pantallaEspera() {
+  Son.musica('inicio');
+  setTimeout(botonSonido, 0);
   const p = st.pub;
   const guardadoLook = miLookGuardado();
   if (guardadoLook && !p.players[st.pid].look && !st.lookEnviado) {
@@ -457,11 +478,25 @@ function pantallaJuego() {
   // Si el panel tiene algo para tocar (y no es solo esperar), se resalta: "te toca".
   const miTurno = panel && !panel.includes('espera-msg') && /data-act="(nominar|votar|descJefe|descVoc|veto|poder|pasarPalabra|declarar)"/.test(panel)
     && !(g.phase === 'vote' && g.voted && g.voted[yo]) && !(g.phase === 'debate' && lista(g.debate && g.debate.order)[g.debate && g.debate.idx] !== yo);
+  // Sonido: sin música durante la partida; al final, el festejo o el cierre oscuro.
+  if (terminado) {
+    const clave = 'fin-' + (g.eventId || 0) + '-' + st.code;
+    if (st.finalSonado !== clave) {
+      st.finalSonado = clave;
+      Son.musica(g.winner === 'campana' ? 'final-campana' : 'final-operadores');
+    }
+  } else {
+    Son.musica(null);
+  }
+  if (!PRACTICA) Son.atenuar(['al-aire', 'escuchando'].includes(Voz.estadoActual().estado));
+  if (miTurno && !st.miTurnoPrev) Son.efecto('turno');
+  st.miTurnoPrev = !!miTurno;
   $app.className = 'juego';
   $app.innerHTML = `
     <header class="barra">
       ${A.logoChico()}
       <span class="codigo-mini">Sala ${st.code}</span>
+      <button class="btn icono" data-act="modal" data-m="sonido" aria-label="Sonido">${Son.preferencias().musica || Son.preferencias().efectos ? '🔊' : '🔇'}</button>
       <button class="btn icono" data-act="modal" data-m="rol" aria-label="Mi rol">🪪</button>
       <button class="btn icono" data-act="modal" data-m="historial" aria-label="Historial">🗂️</button>
       <button class="btn icono" data-act="modal" data-m="menu" aria-label="Menú">☰</button>
@@ -828,11 +863,13 @@ function detectarNovedades(g) {
       case 'publish': mostrarPublicacion(ev.card, (ev.n || 1) - 1, false); break;
       case 'chaos': mostrarPublicacion(ev.card, (ev.n || 1) - 1, true); break;
       case 'veto':
+        Son.efecto('veto');
         capa(`<div class="aviso-grande">${A.selloVetado()}<h2>¡VETADO!</h2><p>Las dos cartas fueron a La Trituradora y sube la Crisis.</p></div>`, 'aviso-capa', 3500);
         break;
       case 'vetoDenied': toast('El Jefe rechazó el Veto: el Vocero tiene que publicar.'); break;
       case 'carpetazo': {
         const eraTopo = g.reveal && g.reveal[ev.target] === 'topo';
+        Son.efecto('sello');
         const quien = ev.target === st.pid ? '<b>¡Te hicieron un Carpetazo a vos!</b> Quedaste afuera: desde ahora, calladito.' : `<b>${esc(nombre(ev.target))}</b> quedó afuera de la campaña.`;
         capa(`<div class="aviso-grande">${A.iconoPoder('carpetazo')}<h2>¡Carpetazo!</h2><p>${quien} ${eraTopo ? '<b>¡Y era El Topo!</b>' : 'Nadie sabe qué era.'}</p></div>`, 'aviso-capa', 4500);
         break;
@@ -845,8 +882,8 @@ function detectarNovedades(g) {
           <p class="nota">¿Les creés?</p></div>`, 'aviso-capa', 5000);
         break;
       }
-      case 'encuesta': if (ev.by !== st.pid) toast(nombre(ev.by) + ' encuestó a ' + nombre(ev.target) + '.'); break;
-      case 'bajada': toast('Bajada de línea: el próximo candidato es ' + (ev.target === st.pid ? 'vos' : nombre(ev.target)) + '.'); break;
+      case 'encuesta': Son.efecto('teclado'); if (ev.by !== st.pid) toast(nombre(ev.by) + ' encuestó a ' + nombre(ev.target) + '.'); break;
+      case 'bajada': Son.efecto('orador'); toast('Bajada de línea: el próximo candidato es ' + (ev.target === st.pid ? 'vos' : nombre(ev.target)) + '.'); break;
       case 'carpeta': if (ev.by !== st.pid) toast(nombre(ev.by) + ' ya miró la carpeta.'); break;
     }
   }
@@ -862,8 +899,8 @@ function detectarNovedades(g) {
 // Las animaciones grandes van en fila: una termina y arranca la otra.
 const cola = [];
 let capaAbierta = false;
-function capa(html, clase, ms) {
-  cola.push({ html, clase, ms });
+function capa(html, clase, ms, extra) {
+  cola.push(Object.assign({ html, clase, ms }, extra || {}));
   if (!capaAbierta) siguienteCapa();
 }
 function siguienteCapa() {
@@ -872,12 +909,26 @@ function siguienteCapa() {
   capaAbierta = true;
   const c = document.createElement('div');
   c.className = 'capa ' + item.clase;
-  c.innerHTML = item.html + '<p class="nota tocar">Tocá para seguir</p>';
+  c.innerHTML = (item.suspenso || item.html) + '<p class="nota tocar">Tocá para seguir</p>';
   document.body.appendChild(c);
+  if (item.alAbrir) item.alAbrir();
   let cerrado = false;
+  const relojes = [];
+  if (item.suspenso) {
+    // Primero el suspenso, después la revelación.
+    relojes.push(setTimeout(() => {
+      if (cerrado) return;
+      c.innerHTML = item.html + '<p class="nota tocar">Tocá para seguir</p>';
+      if (item.alRevelar) item.alRevelar();
+    }, item.esperaRevelar || 1400));
+  } else if (item.alRevelar) {
+    relojes.push(setTimeout(() => { if (!cerrado) item.alRevelar(); }, item.esperaRevelar || 1200));
+  }
   const cerrar = () => {
     if (cerrado) return;
     cerrado = true;
+    relojes.forEach((r) => clearTimeout(r));
+    if (item.suspenso && item.alRevelar && !c.querySelector('.publicacion')) item.alRevelar();
     c.classList.add('fuera');
     setTimeout(() => { c.remove(); siguienteCapa(); }, 350);
   };
@@ -900,7 +951,11 @@ function animarUrna(lv) {
       </div>`).join('')}
     </div>
   </div>`;
-  capa(html, 'urna-capa', 5000 + 300 * Object.keys(votos).length);
+  capa(html, 'urna-capa', 5000 + 300 * Object.keys(votos).length, {
+    alAbrir: () => Son.efecto('urna'),
+    alRevelar: () => Son.efecto(lv.approved ? 'si' : 'no'),
+    esperaRevelar: 1200,
+  });
 }
 
 function mostrarPublicacion(tipo, idx, caos) {
@@ -909,7 +964,13 @@ function mostrarPublicacion(tipo, idx, caos) {
     ${tipo === 'P' ? A.volante(T.PROPUESTAS[idx % T.PROPUESTAS.length], idx, true) : A.titular(T.ESCANDALOS[idx % T.ESCANDALOS.length], true)}
     <p>${tipo === 'P' ? '¡Nueva Propuesta publicada!' : '¡Nuevo Escándalo en la tapa!'}</p>
   </div>`;
-  capa(html, 'pub-capa', 4000);
+  const suspenso = `<div class="suspenso">${caos ? '<div class="cacerolazo">¡Cacerolazo!</div>' : ''}<div class="suspenso-ico">🥁</div><p>${caos ? 'El pueblo enojado publica sin poderes…' : 'Se viene la tapa…'}</p></div>`;
+  capa(html, 'pub-capa', 5400, {
+    suspenso,
+    alAbrir: () => Son.efecto(caos ? 'cacerolazo' : 'redoble'),
+    alRevelar: () => Son.efecto(tipo === 'P' ? 'propuesta' : 'escandalo'),
+    esperaRevelar: caos ? 2000 : 1400,
+  });
 }
 
 // ------------------------------------------------------------------ Ventanas (modales)
@@ -970,6 +1031,21 @@ function contenidoModal() {
   switch (st.modal) {
     case 'personaje':
       return editorPersonaje();
+    case 'sonido': {
+      const pr = Son.preferencias();
+      const interruptor = (k, titulo, ayuda) => `<div class="ajuste-sonido">
+        <div><b>${titulo}</b><small>${ayuda}</small></div>
+        <button class="btn chico ${pr[k] ? 'primario' : ''}" data-act="sonidoToggle" data-k="${k}" aria-pressed="${pr[k]}">${pr[k] ? 'Prendida' : 'Apagada'}</button>
+      </div>`;
+      return `<h2>🔊 Música y sonido</h2>
+        ${interruptor('musica', '🎵 Música', 'En el inicio, la sala de espera y el final. Nunca durante el debate.')}
+        ${interruptor('efectos', '✨ Efectos', 'Suspenso al publicar, la urna, tu turno, el carpetazo…')}
+        <label class="campo">🔈 Volumen
+          <input id="volumen" type="range" min="0" max="1" step="0.05" value="${pr.volumen}">
+        </label>
+        <button class="btn chico" data-act="probarSonido">▶️ Probar</button>
+        <p class="nota">Cada celular guarda su elección. Si alguien está hablando por micrófono, los efectos bajan solos.</p>`;
+    }
     case 'micro': {
       const textos = {
         pidiendo: 'Si el navegador te pregunta, tocá <b>Permitir</b>.',
@@ -1279,8 +1355,19 @@ document.addEventListener('click', async (ev) => {
       st.verRol = false;
       dibujarModal();
       break;
+    case 'sonidoToggle': {
+      const pr = Son.preferencias();
+      Son.configurar({ [d.k]: !pr[d.k] });
+      if (d.k === 'musica' && !pr.musica && (!st.pub || st.pub.status === 'lobby')) Son.musica('inicio');
+      dibujarModal();
+      const bs = $app.querySelector('.btn-sonido');
+      if (bs) bs.textContent = Son.preferencias().musica ? '🔊 Música y sonido' : '🔇 Música y sonido';
+      break;
+    }
+    case 'probarSonido': Son.efecto('propuesta'); break;
     case 'toggleRol':
       st.verRol = !st.verRol;
+      if (st.verRol) { Son.efecto('sobre'); Son.efecto('misterio'); }
       dibujarModal();
       break;
   }
@@ -1297,6 +1384,15 @@ setInterval(() => {
     el.style.strokeDashoffset = String(119.4 * (1 - resto));
   });
   const g = st.pub && st.pub.game;
+  // Tic-tac en los últimos 5 segundos del debate y de la votación.
+  const fin = g && g.phase === 'debate' && g.debate ? g.debate.turnEnd : g && g.phase === 'vote' && !(g.voted && g.voted[st.pid]) ? g.voteEnd : 0;
+  if (fin) {
+    const quedan = Math.ceil((fin - ahoraServidor()) / 1000);
+    if (quedan > 0 && quedan <= 5 && st.ultimoTic !== fin + '-' + quedan) {
+      st.ultimoTic = fin + '-' + quedan;
+      Son.efecto('tic');
+    }
+  }
   if (g && g.phase === 'vote' && g.voteEnd && ahoraServidor() >= g.voteEnd) {
     // Avisa el anfitrión (o cualquiera, si el anfitrión no está conectado).
     const clave = 'v' + g.round;
@@ -1314,6 +1410,10 @@ setInterval(() => {
     st.avisoHabla = clave;
     if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
   }
+  if (st.ultimoOrador !== clave) {
+    if (st.ultimoOrador && habla !== st.pid) Son.efecto('orador');
+    st.ultimoOrador = clave;
+  }
   const responsable = habla === st.pid || st.pub.host === st.pid || !st.presence[habla];
   const reintento = !st.pasado || st.pasado.clave !== clave || Date.now() - st.pasado.t > 2500;
   if (responsable && ahoraServidor() >= d.turnEnd && reintento) {
@@ -1327,6 +1427,10 @@ setInterval(() => {
   const g = st.pub && st.pub.game;
   if (g && g.phase !== 'vote') st.miVoto = undefined;
 }, 1000);
+
+document.addEventListener('input', (ev) => {
+  if (ev.target && ev.target.id === 'volumen') Son.configurar({ volumen: Number(ev.target.value) });
+});
 
 // ------------------------------------------------------------------ Arranque
 
