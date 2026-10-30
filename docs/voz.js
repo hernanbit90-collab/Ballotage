@@ -97,11 +97,13 @@ function cambiar(nuevo) {
 const ref = (ruta) => fb.ref(db, base + 'rtc/' + ruta);
 
 // Se llama en cada redibujo con el estado del juego.
-export function actualizar(g, ajustes, anfitrion) {
+export function actualizar(g, ajustes, anfitrion, esBot) {
   if (!fb || !base) return;
   esAnfitrion = !!anfitrion;
-  const activo = ajustes && ajustes.voice !== false && g && g.phase === 'debate' && g.debate && soportado();
+  let activo = ajustes && ajustes.voice !== false && g && g.phase === 'debate' && g.debate && soportado();
   const orden = activo ? (Array.isArray(g.debate.order) ? g.debate.order : Object.values(g.debate.order || {})) : [];
+  // Los bots no tienen micrófono: "hablan" por escrito y con la voz del celular.
+  if (activo && esBot && esBot(orden[g.debate.idx])) activo = false;
   const orador = activo ? orden[g.debate.idx] : null;
   const clave = activo ? g.round + '-' + g.debate.idx : null;
   if (turno && clave === turno.clave) return;
