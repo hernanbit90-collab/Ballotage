@@ -86,6 +86,12 @@ function partidaAlAzar(n, seed) {
         S = jugar(S, quien, { type: 'debateNext', idx: d.idx }, rnd, d.turnEnd + 10);
         break;
       }
+      case 'charla': {
+        const d = rnd(2) ? 'p1' : vivos[rnd(vivos.length)];
+        S = jugar(S, vivos[0], { type: 'charlaSay', text: 'No le creo nada' }, rnd);
+        S = jugar(S, d, { type: 'charlaFin' }, rnd, S.pub.game.charla.fin + 10);
+        break;
+      }
       case 'declare':
         if (!(g.history[g.history.length - 1].declared || {}).chief) S = jugar(S, g.chief, { type: 'declare', proposals: rnd(4) }, rnd);
         if (S.pub.game.phase === 'declare') S = jugar(S, g.vocero, { type: 'declare', proposals: rnd(3) }, rnd);
@@ -263,7 +269,7 @@ test('debate: hablan todos los vivos, empezando por la fórmula', () => {
 
 test('declaraciones del Jefe y el Vocero después de publicar', () => {
   const rnd = semilla(33);
-  let S = salaCon(5, rnd, { debate: 0, declare: true });
+  let S = salaCon(5, rnd, { debate: 0, declare: true, charla: 0 });
   const g = S.pub.game;
   const ok = g.order.filter((p) => E.puedeSerVocero(S, p) && S.sec.roles[p] !== 'topo');
   S = jugar(S, g.candidate, { type: 'nominate', target: ok[0] }, rnd);
@@ -311,4 +317,29 @@ test('cada jugador puede elegir su personaje', () => {
   assert.deepStrictEqual(S.pub.players.p1.look, look);
   assert.throws(() => E.aplicar(S, 'p1', { type: 'look', look: Object.assign({}, look, { pelo: 99 }) }, semilla(1)), /inválido/);
   assert.throws(() => E.aplicar(S, 'p1', { type: 'look', look: { piel: 1 } }, semilla(1)), /inválido/);
+});
+
+test('debate abierto después de las declaraciones', () => {
+  const rnd = semilla(51);
+  let S = salaCon(5, rnd, { debate: 0, declare: true, charla: 45 });
+  const g = S.pub.game;
+  const ok = g.order.filter((p) => E.puedeSerVocero(S, p) && S.sec.roles[p] !== 'topo');
+  S = jugar(S, g.candidate, { type: 'nominate', target: ok[0] }, rnd, 0);
+  for (const p of g.order) S = jugar(S, p, { type: 'vote', vote: true }, rnd, 0);
+  const chief = S.pub.game.chief;
+  const voc = S.pub.game.vocero;
+  S = jugar(S, chief, { type: 'chiefDiscard', index: 0 }, rnd, 0);
+  S = jugar(S, voc, { type: 'voceroDiscard', index: 0 }, rnd, 0);
+  S = jugar(S, voc, { type: 'declare', proposals: 1 }, rnd, 1000);
+  S = jugar(S, chief, { type: 'declare', proposals: 1 }, rnd, 1000);
+  assert.strictEqual(S.pub.game.phase, 'charla');
+  assert.strictEqual(S.pub.game.charla.fin, 46000);
+  const otro = g.order.find((p) => p !== 'p1');
+  assert.throws(() => E.aplicar(JSON.parse(JSON.stringify(S)), otro, { type: 'charlaFin' }, rnd, 5000), /Todavía/);
+  S = jugar(S, otro, { type: 'charlaSay', text: '  ¿Le creen?  ' }, rnd, 2000);
+  assert.strictEqual(S.pub.game.charla.dichos[0].text, '¿Le creen?');
+  S = jugar(S, otro, { type: 'charlaFin' }, rnd, 46000);
+  assert.ok(['nominate', 'power'].includes(S.pub.game.phase));
+  // Un aviso repetido no rompe nada.
+  S = jugar(S, otro, { type: 'charlaFin' }, rnd, 47000);
 });

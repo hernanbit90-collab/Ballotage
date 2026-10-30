@@ -1,14 +1,16 @@
-// Audio en vivo durante el debate: el que tiene la palabra habla y todos lo
-// escuchan. El audio va directo de celular a celular (WebRTC); la base de
-// datos solo sirve para que los celulares se "presenten" entre sí, en
-// rooms/<CÓDIGO>/rtc/<turno>/...
+// Audio en vivo de BALLOTAGE (WebRTC, de celular a celular).
 //
-//   rtc/<turno>/orador            -> sesión actual del que habla (cambia si recarga)
-//   rtc/<turno>/s/<sesión oyente> -> { offer, answer, para, iceL/*, iceS/* }
+// Dos momentos:
+//   - Debate por turnos: habla uno solo (el que tiene la palabra).
+//   - Debate abierto (después de las declaraciones): hablan todos a la vez.
+// En los dos casos cada "orador" publica su micrófono y cada oyente se
+// conecta a cada orador. La base de datos solo sirve para presentarlos:
 //
-// Cada oyente abre una "sesión" nueva cada vez que se conecta (si recarga la
-// página, si se cae la conexión o si el orador recarga), así nunca queda
-// enganchado a una conexión vieja.
+//   rtc/<turno>/<orador>/orador            -> sesión actual del orador
+//   rtc/<turno>/<orador>/s/<sesión oyente> -> { offer, answer, para, iceL/*, iceS/* }
+//
+// Cada oyente abre una sesión nueva cada vez que se conecta (si recarga la
+// página, si se cae la conexión o si el orador recarga).
 
 import { ICE_EXTRA } from './config.js';
 
@@ -23,36 +25,34 @@ let miPid = null;
 let esAnfitrion = false;
 let avisar = () => {};
 
-let turno = null; // { clave, orador }
-let micro = null; // MediaStream del micrófono (solo el orador)
-let conexiones = [];
-let escuchas = [];
-let relojes = [];
+let turno = null; // { clave, oradores: [pids], modo: 'debate' | 'charla' }
+let micro = null; // mi micrófono, si soy orador
+let estadoMicro = 'apagado'; // pidiendo-micro | sin-micro | al-aire
+let escuchasMicro = [];
+let conexionesMicro = [];
+const oyendo = {}; // orador -> { audio, pcs, escuchas, relojes, estado }
 let silenciado = false;
 let callado = false;
-let estado = 'apagado';
-let nivel = 0; // 0..1, para la barrita de volumen
+let nivel = 0;
 let medidor = null;
 
 const id = () => Math.random().toString(36).slice(2, 10);
 
-const audio = document.createElement('audio');
-audio.autoplay = true;
-audio.setAttribute('playsinline', '');
-document.body.appendChild(audio);
+// ------------------------------------------------------------------ Sonido y pantalla
 
-// Los celulares (sobre todo iPhone) solo dejan sonar audio después de un toque:
-// con el primer toque en cualquier parte se "destraba" el sonido.
 let ctx = null;
 function contextoAudio() {
   const C = window.AudioContext || window.webkitAudioContext;
   if (!ctx && C) ctx = new C();
   return ctx;
 }
+// Los celulares (sobre todo iPhone) solo dejan sonar audio después de un toque.
 document.addEventListener('pointerdown', () => {
   const c = contextoAudio();
   if (c && c.state === 'suspended') c.resume().catch(() => {});
-  if (audio.srcObject && audio.paused) audio.play().then(() => cambiar('escuchando')).catch(() => {});
+  for (const o of Object.values(oyendo)) {
+    if (o.audio.srcObject && o.audio.paused) o.audio.play().then(() => { o.estado = 'escuchando'; avisar(); }).catch(() => {});
+  }
 }, true);
 
 // La pantalla no se apaga sola mientras se juega (si el navegador lo permite).
@@ -72,6 +72,8 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && base) pantallaPrendida(true);
 });
 
+// ------------------------------------------------------------------ API
+
 export function iniciar(opciones) {
   fb = opciones.fb;
   db = opciones.db;
@@ -85,13 +87,20 @@ export function sala(code, pid) {
   pantallaPrendida(!!code);
 }
 
-export const estadoActual = () => ({ estado, silenciado, callado, nivel });
 export const soportado = () => !!(window.RTCPeerConnection && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 
-function cambiar(nuevo) {
-  if (estado === nuevo) return;
-  estado = nuevo;
-  avisar();
+// Resumen para la pantalla.
+export function estadoActual() {
+  const lista = Object.values(oyendo);
+  const escuchando = lista.filter((o) => o.estado === 'escuchando').length;
+  const fallan = lista.filter((o) => o.estado === 'sin-conexion').length;
+  const bloqueado = lista.some((o) => o.estado === 'tocar-para-escuchar');
+  let estado = 'apagado';
+  if (turno) {
+    if (turno.oradores.includes(miPid)) estado = estadoMicro;
+    else if (lista.length) estado = bloqueado ? 'tocar-para-escuchar' : lista[0].estado;
+  }
+  return { estado, silenciado, callado, nivel, escuchando, fallan, oyentes: lista.length, bloqueado, modo: turno && turno.modo };
 }
 
 const ref = (ruta) => fb.ref(db, base + 'rtc/' + ruta);
@@ -100,46 +109,52 @@ const ref = (ruta) => fb.ref(db, base + 'rtc/' + ruta);
 export function actualizar(g, ajustes, anfitrion, esBot) {
   if (!fb || !base) return;
   esAnfitrion = !!anfitrion;
-  let activo = ajustes && ajustes.voice !== false && g && g.phase === 'debate' && g.debate && soportado();
-  const orden = activo ? (Array.isArray(g.debate.order) ? g.debate.order : Object.values(g.debate.order || {})) : [];
-  // Los bots no tienen micrófono: "hablan" por escrito y con la voz del celular.
-  if (activo && esBot && esBot(orden[g.debate.idx])) activo = false;
-  const orador = activo ? orden[g.debate.idx] : null;
-  const clave = activo ? g.round + '-' + g.debate.idx : null;
-  if (turno && clave === turno.clave) return;
+  const prendido = ajustes && ajustes.voice !== false && g && soportado();
+  let clave = null;
+  let oradores = [];
+  let modo = null;
+  if (prendido && g.phase === 'debate' && g.debate) {
+    const orden = Array.isArray(g.debate.order) ? g.debate.order : Object.values(g.debate.order || {});
+    const habla = orden[g.debate.idx];
+    // Los bots no tienen micrófono: "hablan" por escrito y con la voz del celular.
+    if (habla && !(esBot && esBot(habla))) { clave = g.round + '-' + g.debate.idx; oradores = [habla]; modo = 'debate'; }
+  } else if (prendido && g.phase === 'charla') {
+    const orden = Array.isArray(g.order) ? g.order : Object.values(g.order || {});
+    oradores = orden.filter((p) => g.alive[p] && !(esBot && esBot(p)));
+    if (oradores.length) { clave = 'c' + g.round; modo = 'charla'; }
+  }
+  if (!turno && !clave) return; // nada que hacer (evita redibujos en cadena)
+  const mismo = turno && clave === turno.clave && turno.oradores.join() === oradores.join();
+  if (mismo) return;
   const anterior = turno;
   cortar();
-  // Limpieza: el que hablaba (o el anfitrión) borra lo del turno anterior.
-  if (anterior && (anterior.orador === miPid || esAnfitrion)) fb.set(ref(anterior.clave), null).catch(() => {});
+  // Limpieza: el anfitrión borra lo del turno anterior.
+  if (anterior && esAnfitrion && anterior.clave !== clave) fb.set(ref(anterior.clave), null).catch(() => {});
   if (!clave) return;
-  turno = { clave, orador };
-  if (orador === miPid) hablar(clave);
-  else escuchar(clave, 0);
-}
-
-function limpiarConexiones() {
-  escuchas.forEach((f) => f());
-  escuchas = [];
-  relojes.forEach((r) => clearTimeout(r));
-  relojes = [];
-  conexiones.forEach((pc) => { try { pc.close(); } catch { /* ya cerrada */ } });
-  conexiones = [];
+  turno = { clave, oradores, modo };
+  if (oradores.includes(miPid)) hablar(clave);
+  for (const o of oradores) if (o !== miPid) escuchar(clave, o, 0);
 }
 
 export function cortar() {
-  limpiarConexiones();
+  const habiaAlgo = !!(turno || micro || Object.keys(oyendo).length);
+  for (const o of Object.keys(oyendo)) cerrarOyente(o);
+  escuchasMicro.forEach((f) => f());
+  escuchasMicro = [];
+  conexionesMicro.forEach((pc) => { try { pc.close(); } catch { /* ya cerrada */ } });
+  conexionesMicro = [];
   if (micro) micro.getTracks().forEach((t) => t.stop());
   micro = null;
+  estadoMicro = 'apagado';
   pararMedidor();
-  audio.srcObject = null;
   turno = null;
   callado = false;
-  cambiar('apagado');
+  if (habiaAlgo) avisar();
 }
 
 export function silenciarAudio(si) {
   silenciado = si;
-  audio.muted = si;
+  for (const o of Object.values(oyendo)) o.audio.muted = si;
   avisar();
 }
 
@@ -152,23 +167,21 @@ export function callarme(si) {
 export function tocarParaEscuchar() {
   const c = contextoAudio();
   if (c && c.state === 'suspended') c.resume().catch(() => {});
-  audio.play().then(() => cambiar('escuchando')).catch(() => {});
+  for (const o of Object.values(oyendo)) {
+    o.audio.play().then(() => { o.estado = 'escuchando'; avisar(); }).catch(() => {});
+  }
 }
 
 export function reintentar() {
   if (!turno) return;
   const t = turno;
-  limpiarConexiones();
-  if (t.orador === miPid) {
-    if (micro) micro.getTracks().forEach((x) => x.stop());
-    micro = null;
-    hablar(t.clave);
-  } else {
-    escuchar(t.clave, 0);
-  }
+  cortar();
+  turno = t;
+  if (t.oradores.includes(miPid)) hablar(t.clave);
+  for (const o of t.oradores) if (o !== miPid) escuchar(t.clave, o, 0);
 }
 
-// ------------------------------------------------------------------ Barrita de volumen
+// ------------------------------------------------------------------ Barrita de volumen (mi micrófono)
 
 function medir(stream) {
   pararMedidor();
@@ -230,12 +243,6 @@ export async function probarMicrofono(alCambiar) {
   };
 }
 
-function nuevaConexion() {
-  const pc = new RTCPeerConnection({ iceServers: SERVIDORES });
-  conexiones.push(pc);
-  return pc;
-}
-
 function candidatos(pc) {
   const pendientes = [];
   return {
@@ -250,99 +257,116 @@ function candidatos(pc) {
   };
 }
 
-// ------------------------------------------------------------------ Orador
+// ------------------------------------------------------------------ Orador (yo hablo)
 
 async function hablar(clave) {
-  cambiar('pidiendo-micro');
+  estadoMicro = 'pidiendo-micro';
+  avisar();
   try {
     micro = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
     });
   } catch {
-    cambiar('sin-micro');
+    estadoMicro = 'sin-micro';
+    avisar();
     return;
   }
   if (!turno || turno.clave !== clave) { micro.getTracks().forEach((t) => t.stop()); micro = null; return; }
   callarme(false);
   medir(micro);
   const yo = id();
-  await fb.set(ref(clave + '/orador'), yo).catch(() => {});
-  cambiar('al-aire');
+  const raiz = clave + '/' + miPid;
+  await fb.set(ref(raiz + '/orador'), yo).catch(() => {});
+  estadoMicro = 'al-aire';
+  avisar();
   const atendidas = new Set();
-  escuchas.push(fb.onChildAdded(ref(clave + '/s'), (snap) => {
+  escuchasMicro.push(fb.onChildAdded(ref(raiz + '/s'), (snap) => {
     const sesion = snap.key;
-    const offOferta = fb.onValue(ref(clave + '/s/' + sesion + '/offer'), async (o) => {
+    const camino = raiz + '/s/' + sesion;
+    escuchasMicro.push(fb.onValue(ref(camino + '/offer'), async (o) => {
       const oferta = o.val();
       if (!oferta || atendidas.has(sesion) || !micro) return;
       if (oferta.para && oferta.para !== yo) return; // era para una sesión vieja mía
       atendidas.add(sesion);
-      const pc = nuevaConexion();
+      const pc = new RTCPeerConnection({ iceServers: SERVIDORES });
+      conexionesMicro.push(pc);
       const cand = candidatos(pc);
       micro.getTracks().forEach((t) => pc.addTrack(t, micro));
       pc.onicecandidate = (e) => {
-        if (e.candidate) fb.push(ref(clave + '/s/' + sesion + '/iceS'), e.candidate.toJSON()).catch(() => {});
+        if (e.candidate) fb.push(ref(camino + '/iceS'), e.candidate.toJSON()).catch(() => {});
       };
-      escuchas.push(fb.onChildAdded(ref(clave + '/s/' + sesion + '/iceL'), (c) => cand.agregar(c.val())));
+      escuchasMicro.push(fb.onChildAdded(ref(camino + '/iceL'), (c) => cand.agregar(c.val())));
       try {
         await pc.setRemoteDescription({ type: oferta.type, sdp: oferta.sdp });
         cand.listo();
         const respuesta = await pc.createAnswer();
         await pc.setLocalDescription(respuesta);
-        await fb.set(ref(clave + '/s/' + sesion + '/answer'), { type: respuesta.type, sdp: respuesta.sdp, de: yo });
+        await fb.set(ref(camino + '/answer'), { type: respuesta.type, sdp: respuesta.sdp, de: yo });
       } catch (e) {
         console.warn('Audio: no pude atender a un oyente', e);
       }
-    });
-    escuchas.push(offOferta);
+    }));
   }));
 }
 
-// ------------------------------------------------------------------ Oyente
+// ------------------------------------------------------------------ Oyente (escucho a un orador)
 
-function escuchar(clave, intento) {
-  cambiar(intento ? 'reconectando' : 'conectando');
+function cerrarOyente(orador) {
+  const o = oyendo[orador];
+  if (!o) return;
+  o.escuchas.forEach((f) => f());
+  o.relojes.forEach((r) => clearTimeout(r));
+  o.pcs.forEach((pc) => { try { pc.close(); } catch { /* ya cerrada */ } });
+  o.audio.srcObject = null;
+  o.audio.remove();
+  delete oyendo[orador];
+}
+
+function escuchar(clave, orador, intento) {
+  cerrarOyente(orador);
+  const audio = document.createElement('audio');
+  audio.autoplay = true;
+  audio.setAttribute('playsinline', '');
+  audio.muted = silenciado;
+  audio.dataset.orador = orador;
+  document.body.appendChild(audio);
+  const o = { audio, pcs: [], escuchas: [], relojes: [], estado: intento ? 'reconectando' : 'conectando', intento };
+  oyendo[orador] = o;
+  avisar();
   // Espera a saber qué sesión del orador está al aire y se conecta a esa;
   // si el orador recarga la página, cambia la sesión y se reconecta solo.
   let sesionOrador = null;
-  escuchas.push(fb.onValue(ref(clave + '/orador'), (s) => {
+  o.escuchas.push(fb.onValue(ref(clave + '/' + orador + '/orador'), (s) => {
     const nueva = s.val();
     if (!nueva || nueva === sesionOrador) return;
     sesionOrador = nueva;
-    conectar(clave, nueva, intento);
+    conectar(clave, orador, nueva, o);
   }));
 }
 
-async function conectar(clave, sesionOrador, intento) {
-  // Corta una conexión anterior (si el orador cambió de sesión).
-  conexiones.forEach((pc) => { try { pc.close(); } catch { /* ya cerrada */ } });
-  conexiones = [];
+async function conectar(clave, orador, sesionOrador, o) {
+  o.pcs.forEach((pc) => { try { pc.close(); } catch { /* ya cerrada */ } });
+  o.pcs = [];
   const sesion = miPid + '-' + id();
-  const camino = clave + '/s/' + sesion;
-  const pc = nuevaConexion();
+  const camino = clave + '/' + orador + '/s/' + sesion;
+  const pc = new RTCPeerConnection({ iceServers: SERVIDORES });
+  o.pcs.push(pc);
   const cand = candidatos(pc);
   let conectado = false;
+  const cambiar = (e) => { o.estado = e; avisar(); };
   pc.addTransceiver('audio', { direction: 'recvonly' });
   pc.ontrack = (e) => {
-    const stream = e.streams[0] || new MediaStream([e.track]);
-    audio.srcObject = stream;
-    audio.muted = silenciado;
-    medir(stream);
-    audio.play().then(() => cambiar('escuchando')).catch(() => cambiar('tocar-para-escuchar'));
+    o.audio.srcObject = e.streams[0] || new MediaStream([e.track]);
+    o.audio.muted = silenciado;
+    o.audio.play().then(() => cambiar('escuchando')).catch(() => cambiar('tocar-para-escuchar'));
   };
   const fallo = () => {
-    if (!turno || turno.clave !== clave || conectado) return;
-    if (intento + 1 < REINTENTOS) {
-      limpiarConexiones();
-      escuchar(clave, intento + 1);
-    } else {
-      cambiar('sin-conexion');
-    }
+    if (!turno || turno.clave !== clave || conectado || oyendo[orador] !== o) return;
+    if (o.intento + 1 < REINTENTOS) escuchar(clave, orador, o.intento + 1);
+    else cambiar('sin-conexion');
   };
   pc.onconnectionstatechange = () => {
-    if (pc.connectionState === 'connected') {
-      conectado = true;
-      if (estado !== 'tocar-para-escuchar') cambiar('escuchando');
-    }
+    if (pc.connectionState === 'connected') { conectado = true; if (o.estado !== 'tocar-para-escuchar') cambiar('escuchando'); }
     if (pc.connectionState === 'failed') { conectado = false; fallo(); }
   };
   pc.oniceconnectionstatechange = () => {
@@ -351,7 +375,7 @@ async function conectar(clave, sesionOrador, intento) {
   pc.onicecandidate = (e) => {
     if (e.candidate) fb.push(ref(camino + '/iceL'), e.candidate.toJSON()).catch(() => {});
   };
-  escuchas.push(fb.onValue(ref(camino + '/answer'), async (s) => {
+  o.escuchas.push(fb.onValue(ref(camino + '/answer'), async (s) => {
     const r = s.val();
     if (!r || pc.remoteDescription || pc.signalingState === 'closed') return;
     try {
@@ -361,8 +385,8 @@ async function conectar(clave, sesionOrador, intento) {
       console.warn('Audio: respuesta inválida', e);
     }
   }));
-  escuchas.push(fb.onChildAdded(ref(camino + '/iceS'), (c) => cand.agregar(c.val())));
-  relojes.push(setTimeout(() => { if (!conectado) fallo(); }, ESPERA_CONEXION_MS));
+  o.escuchas.push(fb.onChildAdded(ref(camino + '/iceS'), (c) => cand.agregar(c.val())));
+  o.relojes.push(setTimeout(() => { if (!conectado) fallo(); }, ESPERA_CONEXION_MS));
   try {
     const oferta = await pc.createOffer();
     await pc.setLocalDescription(oferta);

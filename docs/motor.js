@@ -38,7 +38,11 @@ const TOLERANCIA_MS = 1500;
 
 // Votación: segundos para votar; quien no vota a tiempo cuenta como ¡Sí!.
 const VOTO_OPCIONES = [0, 20, 30, 45, 60, 90];
-const VOTO_POR_DEFECTO = 30; // por diferencias de reloj entre celulares
+const VOTO_POR_DEFECTO = 30;
+
+// Debate abierto después de las declaraciones: todos pueden hablar a la vez.
+const CHARLA_OPCIONES = [0, 30, 45, 60];
+const CHARLA_POR_DEFECTO = 30; // por diferencias de reloj entre celulares
 
 // Cantidad de operadores (sin contar al Topo) según jugadores.
 const OPERADORES_POR_CANTIDAD = { 5: 1, 6: 1, 7: 2, 8: 2, 9: 3, 10: 3 };
@@ -107,7 +111,7 @@ function crearSala(code, uid, name, ahora) {
       nextPid: 2,
       createdAt: ahora,
       players: { p1: { name, joinedAt: ahora } },
-      settings: { debate: DEBATE_POR_DEFECTO, declare: true, voteTime: VOTO_POR_DEFECTO, voice: true },
+      settings: { debate: DEBATE_POR_DEFECTO, declare: true, voteTime: VOTO_POR_DEFECTO, voice: true, charla: CHARLA_POR_DEFECTO },
     },
     priv: { p1: { pin: null } },
   };
@@ -178,6 +182,10 @@ function ajustes(S, pid, a) {
   }
   if (a.declare !== undefined) actual.declare = !!a.declare;
   if (a.voice !== undefined) actual.voice = !!a.voice;
+  if (a.charla !== undefined) {
+    exigir(CHARLA_OPCIONES.includes(a.charla), 'Tiempo de debate abierto inválido.');
+    actual.charla = a.charla;
+  }
   if (a.voteTime !== undefined) {
     exigir(VOTO_OPCIONES.includes(a.voteTime), 'Tiempo de votación inválido.');
     actual.voteTime = a.voteTime;
@@ -192,6 +200,7 @@ function config(S) {
     declare: c.declare !== false,
     voteTime: VOTO_OPCIONES.includes(c.voteTime) ? c.voteTime : VOTO_POR_DEFECTO,
     voice: c.voice !== false, // audio en vivo para el que tiene la palabra
+    charla: CHARLA_OPCIONES.includes(c.charla) ? c.charla : CHARLA_POR_DEFECTO,
   };
 }
 
@@ -330,6 +339,7 @@ function siguienteRonda(S) {
   g.pendingPower = '';
   g.debate = null;
   g.voteEnd = 0;
+  g.charla = null;
   g.vetoDenied = false;
   g.phase = 'nominate';
   g.round += 1;
@@ -609,7 +619,7 @@ function despuesDePublicar(S, poder) {
 }
 
 // El Jefe cuenta cuántas Propuestas vio entre 3 cartas; el Vocero, entre 2.
-function declarar(S, pid, propuestas) {
+function declarar(S, pid, propuestas, ahora) {
   const g = S.pub.game;
   exigir(g.phase === 'declare', 'No es momento de declarar.');
   exigir(pid === g.chief || pid === g.vocero, 'Solo declaran el Jefe y el Vocero.');
@@ -629,10 +639,40 @@ function declarar(S, pid, propuestas) {
     const frase = (p, n, t) => nombre(S, p) + ' dice ' + n + ' Propuesta' + (n === 1 ? '' : 's') + ' y ' + (t - n) + ' Escándalo' + (t - n === 1 ? '' : 's');
     log(S, 'Declaraciones: ' + frase(g.chief, r.claims.chief, 3) + ' (Jefe); ' + frase(g.vocero, r.claims.vocero, 2) + ' (Vocero).');
     evento(S, 'claims', {});
+    const segs = config(S).charla;
+    if (segs) {
+      // ¿Les creés? Micrófono abierto para todos durante un rato.
+      g.phase = 'charla';
+      g.charla = { fin: ahora + segs * 1000, secs: segs };
+      log(S, '¡Debate abierto! Todos pueden hablar durante ' + segs + ' segundos.');
+      return;
+    }
     const poder = g.pendingPower;
     g.pendingPower = '';
     despuesDePublicar(S, poder);
   }
+}
+
+// Termina el debate abierto: cuando se acaba el tiempo, o antes si lo corta
+// el anfitrión (en carrera).
+function terminarCharla(S, pid, ahora) {
+  const g = S.pub.game;
+  if (g.phase !== 'charla') return; // ya terminó (otro celular avisó primero)
+  exigir((S.pub.host === pid && g.alive[pid]) || ahora >= g.charla.fin - TOLERANCIA_MS, 'Todavía queda tiempo de debate.');
+  const poder = g.pendingPower;
+  g.pendingPower = '';
+  g.charla = null;
+  despuesDePublicar(S, poder);
+}
+
+// Lo que escribe un jugador (o un bot) en el debate abierto.
+function dichoCharla(S, pid, text) {
+  const g = S.pub.game;
+  exigir(g.phase === 'charla', 'No hay debate abierto.');
+  exigir(g.alive[pid], 'Los fantasmas no hablan.');
+  const t = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+  exigir(t.length > 0, 'Mensaje vacío.');
+  g.charla.dichos = lista(g.charla.dichos).concat([{ pid, text: t }]).slice(-8);
 }
 
 function pedirVeto(S, pid) {
@@ -761,7 +801,9 @@ function aplicar(S, pid, a, rnd, ahora) {
   switch (a.type) {
     case 'nominate': return nominar(S, pid, a.target, ahora);
     case 'debateNext': return pasarPalabra(S, pid, a, ahora);
-    case 'declare': return declarar(S, pid, a.proposals);
+    case 'declare': return declarar(S, pid, a.proposals, ahora);
+    case 'charlaFin': return terminarCharla(S, pid, ahora);
+    case 'charlaSay': return dichoCharla(S, pid, a.text);
     case 'vote': return votar(S, pid, a.vote, rnd);
     case 'voteTimeout': return votoVencido(S, rnd, ahora);
     case 'chiefDiscard': return descartarJefe(S, pid, a.index);
@@ -776,7 +818,7 @@ function aplicar(S, pid, a, rnd, ahora) {
 const API = {
   ROLES, BANDOS, CARTAS, PODERES, OPERADORES_POR_CANTIDAD,
   ErrorJuego, crearSala, unirse, limpiarNombre, aplicar, puedeSerVocero, tableroEscandalos, lista,
-  config, DEBATE_OPCIONES, VOTO_OPCIONES, LOOK_OPCIONES,
+  config, DEBATE_OPCIONES, VOTO_OPCIONES, LOOK_OPCIONES, CHARLA_OPCIONES,
 };
 
 // En el servidor se usa con require(); en el modo práctica del navegador,
