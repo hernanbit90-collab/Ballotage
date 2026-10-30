@@ -7,6 +7,7 @@
 // Mientras el anfitrión tenga el juego cerrado, la partida queda en pausa.
 
 import './motor.js';
+import * as Bots from './bots.js';
 
 const E = globalThis.BallotageEngine;
 const LETRAS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // sin I ni O para no confundir
@@ -67,7 +68,7 @@ async function crear(nombre, email) {
     const S = E.crearSala(code, uidActual, name, ahora());
     S.emails = { p1: email || '' };
     await escribir(code, S);
-    salas[code] = { S, cola: Promise.resolve() };
+    salas[code] = { S, cola: Promise.resolve(), mem: Bots.crearMemoria() };
     escucharBuzon(code);
     return { code, pid: 'p1' };
   }
@@ -84,20 +85,26 @@ export async function asegurarArbitro(code) {
   salas[code] = {
     S: { auth: snap.auth || {}, pub: snap.pub, priv: snap.priv || {}, sec: snap.hostsec || null, emails: snap.emails || {} },
     cola: Promise.resolve(),
+    mem: Bots.crearMemoria(),
   };
   escucharBuzon(code);
+  programarBots(code);
   return true;
 }
 
 export function detener() {
   for (const code of Object.keys(salas)) {
     if (salas[code].off) salas[code].off();
+    clearTimeout(salas[code].botReloj);
+    clearInterval(salas[code].latido);
     delete salas[code];
   }
 }
 
 function escucharBuzon(code) {
   const sala = salas[code];
+  // Por si un bot quedó esperando (por ejemplo, después de recargar la página).
+  sala.latido = setInterval(() => { if (salas[code] && !salas[code].botReloj) programarBots(code); }, 3000);
   sala.off = fb.onChildAdded(ref('rooms/' + code + '/inbox'), async (snap) => {
     const pedido = snap.val() || {};
     const r = await procesar(code, pedido);
@@ -133,6 +140,24 @@ function procesar(code, pedido) {
         const pid = E.unirse(T, pedido.uid, name, pedido.pin, t);
         T.emails = Object.assign({}, T.emails, { [pid]: pedido.email || '' });
         r = { code, pid };
+      } else if (pedido.op === 'addBot') {
+        // Solo el anfitrión suma bots, en la sala de espera.
+        if (pedido.uid !== uidActual) throw new E.ErrorJuego('Solo el anfitrión puede sumar bots.');
+        if (T.pub.status !== 'lobby') throw new E.ErrorJuego('Los bots se suman antes de empezar.');
+        const usados = Object.values(T.pub.players).map((x) => x.name.toLowerCase());
+        const libre = Bots.NOMBRES_BOTS.find((n) => !usados.includes(n.toLowerCase()));
+        if (!libre) throw new E.ErrorJuego('No quedan nombres de bots.');
+        const pid = E.unirse(T, 'bot-' + Math.random().toString(36).slice(2, 10), libre, null, t);
+        T.pub.players[pid].bot = true;
+        await fb.set(ref('rooms/' + code + '/presence/' + pid), true).catch(() => {});
+        r = { ok: true, pid };
+      } else if (pedido.op === 'botSay') {
+        // Lo que dice un bot en su turno del debate (lo escribe el árbitro).
+        if (pedido.uid !== uidActual) throw new E.ErrorJuego('Pedido inválido.');
+        const g = T.pub.game;
+        if (!g || g.phase !== 'debate' || !g.debate) return { ok: true };
+        g.debate.say = { idx: g.debate.idx, round: g.round, pid: pedido.pid, text: String(pedido.text || '').slice(0, 200) };
+        r = { ok: true };
       } else if (pedido.op === 'act') {
         const pid = T.auth && T.auth[pedido.uid];
         if (!pid) throw new E.ErrorJuego('No estás en esta sala.');
@@ -151,8 +176,10 @@ function procesar(code, pedido) {
       } else {
         throw new E.ErrorJuego('Pedido desconocido.');
       }
+      if (pedido.op === 'act' && pedido.action && pedido.action.type === 'rematch') sala.mem = Bots.crearMemoria();
       sala.S = T;
       await escribir(code, T);
+      programarBots(code);
       return r;
     } catch (e) {
       if (e instanceof E.ErrorJuego) return { error: e.message };
@@ -162,6 +189,36 @@ function procesar(code, pedido) {
   };
   sala.cola = sala.cola.then(tarea, tarea);
   return sala.cola;
+}
+
+// ------------------------------------------------------------------ Bots
+
+// Los bots los maneja este celular (el del anfitrión): mira el estado, decide
+// la próxima jugada de algún bot y la manda como si fuera un pedido más.
+function programarBots(code) {
+  const sala = salas[code];
+  if (!sala) return;
+  clearTimeout(sala.botReloj);
+  sala.botReloj = null;
+  const S = sala.S;
+  if (!S || S.pub.status !== 'playing') return;
+  const esBot = (pid) => !!(S.pub.players[pid] && S.pub.players[pid].bot);
+  if (!Object.keys(S.pub.players).some(esBot)) return;
+  const d = Bots.decidir(S, sala.mem, esBot, ahora());
+  if (!d) return;
+  sala.botReloj = setTimeout(() => {
+    sala.botReloj = null;
+    if (!salas[code]) return;
+    if (d.decir) {
+      procesar(code, { op: 'botSay', uid: uidActual, pid: d.decir.pid, text: d.decir.text });
+      return;
+    }
+    const uid = Object.keys(sala.S.auth || {}).find((u) => sala.S.auth[u] === d.pid);
+    if (!uid) return;
+    procesar(code, { op: 'act', uid, action: d.action }).then((r) => {
+      if (r && r.error) programarBots(code); // cambió algo mientras pensaba: vuelve a mirar
+    });
+  }, d.demora);
 }
 
 // Pedido de un jugador que no es el anfitrión: lo deja en el buzón y espera.

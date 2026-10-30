@@ -8,6 +8,7 @@ import * as Practica from './practica.js';
 import * as Anfitrion from './anfitrion.js';
 import * as Voz from './voz.js';
 import * as Son from './sonido.js';
+import * as Habla from './habla.js';
 
 const { firebaseConfig, REGION } = CFG;
 
@@ -371,6 +372,7 @@ function dibujar() {
   pantallaJuego();
 }
 
+const esBotPid = (pid) => !!(st.pub && st.pub.players && st.pub.players[pid] && st.pub.players[pid].bot);
 const lookDe = (pid) => (st.pub && st.pub.players[pid] && st.pub.players[pid].look) || null;
 
 function miLookGuardado() {
@@ -421,11 +423,12 @@ function pantallaEspera() {
         <li>
           <span class="punto ${st.presence[pid] ? 'on' : ''}"></span>
           <span class="mini-cara">${A.avatar(p.players[pid].name, p.players[pid].look)}</span>
-          <span class="nombre">${esc(p.players[pid].name)}${pid === st.pid ? ' <em>(vos)</em>' : ''}</span>
+          <span class="nombre">${esc(p.players[pid].name)}${pid === st.pid ? ' <em>(vos)</em>' : ''}${p.players[pid].bot ? ' <span class="chapa bot">🤖 bot</span>' : ''}</span>
           ${pid === p.host ? '<span class="chapa">anfitrión</span>' : ''}
-          ${soyHost && pid !== st.pid && !PRACTICA ? `<button class="btn chico peligro" data-act="echar" data-pid="${pid}">Sacar</button>` : ''}
+          ${soyHost && pid !== st.pid && !PRACTICA ? `<button class="btn chico peligro sacar" data-act="echar" data-pid="${pid}" aria-label="Sacar a ${esc(p.players[pid].name)}" title="Sacar">✕</button>` : ''}
         </li>`).join('')}
     </ul>
+    ${soyHost && GRATIS && !PRACTICA && n < 10 ? `<button class="btn grande secundario" data-act="agregarBot">🤖 Agregar un bot${n < 5 ? ` <small>(faltan ${5 - n})</small>` : ''}</button>` : ''}
     <button class="btn fantasma grande" data-act="editarPersonaje">🎨 Armar mi personaje</button>
     ${panelAjustes(p, soyHost)}
     ${n < 5 ? `<p class="nota">Faltan ${5 - n} para arrancar (mínimo 5, máximo 10).</p>` : ''}
@@ -469,7 +472,15 @@ function pantallaJuego() {
   const g = st.pub.game;
   if (!g) return;
   detectarNovedades(g);
-  if (!PRACTICA) Voz.actualizar(g, st.pub.settings, st.pub.host === st.pid);
+  if (!PRACTICA) Voz.actualizar(g, st.pub.settings, st.pub.host === st.pid, esBotPid);
+  // Si habla un bot, se escucha lo que escribió (una sola vez por turno).
+  if (g.phase === 'debate' && g.debate && g.debate.say && g.debate.say.idx === g.debate.idx) {
+    const clave = g.round + '-' + g.debate.idx + '-' + g.debate.say.text.length;
+    if (st.ultimoDicho !== clave) { st.ultimoDicho = clave; Habla.decir(g.debate.say.text, g.debate.say.pid); }
+  } else if (st.ultimoDicho && g.phase !== 'debate') {
+    st.ultimoDicho = null;
+    Habla.callar();
+  }
   const yo = st.pid;
   const vivo = g.alive[yo];
   // La pantalla final espera a que terminen las animaciones (no spoilear).
@@ -571,7 +582,7 @@ function filaJugadores(g) {
     return `<div class="${cls}" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%">
       ${pid === st.pid ? '<span class="vos">VOS</span>' : ''}
       <div class="cara">${A.avatar(nombre(pid), lookDe(pid))}${pid === habla ? '<span class="marca habla" title="Está hablando">🎙️</span>' : ''}${!g.alive[pid] ? '<span class="sello-out">OUT</span>' : ''}</div>
-      <div class="nom">${esc(nombre(pid))}</div>
+      <div class="nom">${esbotMarca(pid)}${esc(nombre(pid))}</div>
       ${cartel}${estado}${rev}
     </div>`;
   }).join('');
@@ -606,6 +617,8 @@ function filaJugadores(g) {
     <p class="mesa-ayuda">➤ Las flechitas muestran hacia dónde rota el cargo de Jefe</p>
   </section>`;
 }
+
+const esbotMarca = (pid) => (esBotPid(pid) ? '<span class="es-bot" title="Bot">🤖</span>' : '');
 
 function proximoCandidato(g) {
   if (g.special) return g.special;
@@ -729,7 +742,7 @@ function panelDebate(g) {
       <div class="orador-txt">
         ${habla === yo
           ? '<b>¡Te toca hablar!</b><small>Defendé o atacá la fórmula, contá lo que sabés… o lo que te conviene.</small>'
-          : `<b>Habla ${esc(nombre(habla))}</b><small>${dicho ? '“' + esc(dicho) + '”' : 'Los demás, a escuchar (o a poner cara de póker).'}</small>`}
+          : `<b>Habla ${esc(nombre(habla))}${esBotPid(habla) ? ' 🤖' : ''}</b>${dicho ? `<span class="burbuja">“${esc(dicho)}”</span>` : `<small>${esBotPid(habla) ? 'Está pensando qué decir…' : 'Los demás, a escuchar (o a poner cara de póker).'}</small>`}`}
       </div>
     </div>
     <ol class="oradores">${orden.map((p, i) => `<li class="${i < d.idx ? 'hablo' : i === d.idx ? 'ahora' : ''}">${esc(nombre(p))}</li>`).join('')}</ol>
@@ -740,6 +753,7 @@ function panelDebate(g) {
 }
 
 function panelVoz(habla) {
+  if (esBotPid(habla)) return `<div class="voz"><span>🤖 <b>${esc(nombre(habla))}</b> es un bot: dice lo suyo por escrito${Habla.activa() ? ' y en voz alta' : ''}.</span></div>`;
   if (PRACTICA || (st.pub.settings && st.pub.settings.voice === false)) return '';
   if (!Voz.soportado()) return '<div class="voz"><span>⚠️ Este navegador no permite audio en vivo. Probá con Chrome o Safari actualizados.</span></div>';
   const v = Voz.estadoActual();
@@ -1040,6 +1054,10 @@ function contenidoModal() {
       return `<h2>🔊 Música y sonido</h2>
         ${interruptor('musica', '🎵 Música', 'En el inicio, la sala de espera y el final. Nunca durante el debate.')}
         ${interruptor('efectos', '✨ Efectos', 'Suspenso al publicar, la urna, tu turno, el carpetazo…')}
+        ${Habla.soportada() ? `<div class="ajuste-sonido">
+          <div><b>🤖 Voz de los bots</b><small>Leen en voz alta lo que dicen en el debate.</small></div>
+          <button class="btn chico ${Habla.activa() ? 'primario' : ''}" data-act="vozBots" aria-pressed="${Habla.activa()}">${Habla.activa() ? 'Prendida' : 'Apagada'}</button>
+        </div>` : ''}
         <label class="campo">🔈 Volumen
           <input id="volumen" type="range" min="0" max="1" step="0.05" value="${pr.volumen}">
         </label>
@@ -1353,6 +1371,15 @@ document.addEventListener('click', async (ev) => {
       if (st.pararPrueba) { st.pararPrueba(); st.pararPrueba = null; }
       st.modal = null;
       st.verRol = false;
+      dibujarModal();
+      break;
+    case 'agregarBot': {
+      const r = await pedir({ op: 'addBot', code: st.code });
+      if (r) toast('🤖 Se sumó un bot a la mesa.');
+      break;
+    }
+    case 'vozBots':
+      Habla.activar(!Habla.activa());
       dibujarModal();
       break;
     case 'sonidoToggle': {

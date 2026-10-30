@@ -784,3 +784,9 @@ h2 .ico-poder { width: 28px; height: 28px; margin: 0; }
 @keyframes redoble { from { transform: rotate(-8deg) scale(1); } to { transform: rotate(8deg) scale(1.08); } }
 @media (prefers-reduced-motion: reduce) { .suspenso-ico { animation: none; } }
 .modal .campo { color: var(--tinta); }
+
+/* ---------- Bots ---------- */
+.chapa.bot { background: var(--cielo); color: var(--tinta); font-size: .68rem; }
+.asiento .es-bot { font-size: .75em; margin-right: 2px; }
+.burbuja { position: relative; display: block; margin-top: 4px; background: var(--papel-2); color: var(--tinta); border-radius: 12px 12px 12px 4px; padding: 6px 10px; font-size: .88rem; line-height: 1.3; animation: asomar .3s ease-out; }
+.btn.sacar { padding: 2px 8px; min-height: 0; line-height: 1.4; flex: none; }
