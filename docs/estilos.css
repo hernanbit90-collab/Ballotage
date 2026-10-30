@@ -772,3 +772,15 @@ h2 .ico-poder { width: 28px; height: 28px; margin: 0; }
   .bol .dorso { display: none; }
   .bol .frente, .resultado { transform: none; opacity: 1; }
 }
+
+/* ---------- Sonido ---------- */
+.btn-sonido { margin-top: 8px; }
+.ajuste-sonido { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px dashed rgba(0, 0, 0, .12); }
+.ajuste-sonido small { display: block; font-size: .78rem; opacity: .75; }
+#volumen { width: 100%; accent-color: var(--fucsia); }
+.suspenso { text-align: center; color: #fff; }
+.suspenso-ico { font-size: 4rem; animation: redoble .12s infinite alternate; }
+.suspenso p { font-family: var(--fuente-titulo); font-size: 1.3rem; }
+@keyframes redoble { from { transform: rotate(-8deg) scale(1); } to { transform: rotate(8deg) scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .suspenso-ico { animation: none; } }
+.modal .campo { color: var(--tinta); }
