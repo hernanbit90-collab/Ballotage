@@ -463,6 +463,9 @@ function panelAjustes(p, soyHost) {
     ${ajuste('🗣️ Declaraciones', c.declare ? 'Sí' : 'No',
     'Después de publicar, el Jefe y el Vocero cuentan qué cartas les llegaron. Pueden mentir.',
     `<div class="dos"><button class="btn cant ${c.declare ? 'elegida' : ''}" data-act="ajuste" data-declare="1">Sí</button><button class="btn cant ${!c.declare ? 'elegida' : ''}" data-act="ajuste" data-declare="0">No</button></div>`)}
+    ${c.declare ? ajuste('📣 Debate abierto (¿Les creés?)', (c.charla ?? 30) ? (c.charla ?? 30) + ' segundos' : 'Sin debate abierto',
+    'Después de las declaraciones se abren los micrófonos de todos a la vez para discutir.',
+    `<div class="cantidades">${[0, 30, 45, 60].map((t) => `<button class="btn cant ${(c.charla ?? 30) === t ? 'elegida' : ''}" data-act="ajuste" data-charla="${t}">${t ? t + ' s' : 'Sin'}</button>`).join('')}</div>`) : ''}
   </div>`;
 }
 
@@ -477,6 +480,12 @@ function pantallaJuego() {
   if (g.phase === 'debate' && g.debate && g.debate.say && g.debate.say.idx === g.debate.idx) {
     const clave = g.round + '-' + g.debate.idx + '-' + g.debate.say.text.length;
     if (st.ultimoDicho !== clave) { st.ultimoDicho = clave; Habla.decir(g.debate.say.text, g.debate.say.pid); }
+  } else if (g.phase === 'charla' && g.charla) {
+    const dichos = lista(g.charla.dichos);
+    const clave = 'c' + g.round;
+    if (!st.charlaLeidos || st.charlaLeidos.clave !== clave) st.charlaLeidos = { clave, n: dichos.length };
+    for (const x of dichos.slice(st.charlaLeidos.n)) if (esBotPid(x.pid)) Habla.decir(x.text, x.pid);
+    st.charlaLeidos.n = dichos.length;
   } else if (st.ultimoDicho && g.phase !== 'debate') {
     st.ultimoDicho = null;
     Habla.callar();
@@ -642,6 +651,7 @@ function centroMesa(g) {
     voceroDiscard: `<span class="c-ico">🎤</span>${n(g.vocero)}<small>decide qué publicar</small>`,
     vetoReply: `<span class="c-ico">⛔</span>¡Pedido de veto!<small>decide ${esc(nombre(g.chief))}</small>`,
     declare: `<span class="c-ico">🗣️</span>Declaraciones<small>del Jefe y el Vocero</small>`,
+    charla: g.charla ? `<span class="c-ico">📣</span>Debate abierto<small><span data-fin="${g.charla.fin}">${relojTexto(g.charla.fin)}</span> s · hablan todos</small>` : '',
     power: `<span class="c-ico">${A.iconoPoder(g.power)}</span>${(T.PODERES[g.power] || {}).nombre || 'Poder'}<small>lo usa ${esc(nombre(g.chief))}</small>`,
     ended: `<span class="c-ico">${g.winner === 'campana' ? '🎉' : '🕶️'}</span>${g.winner === 'campana' ? 'Ganó la Campaña' : 'Ganaron los Operadores'}`,
   };
@@ -666,6 +676,8 @@ function panelAccion(g) {
       return panelDebate(g);
     case 'declare':
       return panelDeclarar(g);
+    case 'charla':
+      return panelCharla(g);
     case 'vote': {
       const titulo = `<h2>¿Votás esta fórmula?</h2>
         <div class="formula">
@@ -696,7 +708,7 @@ function panelAccion(g) {
       if (g.vocero !== yo) return esperando(`<b>${esc(nombre(g.vocero))}</b> (Vocero) está decidiendo qué publicar.`);
       const veto = g.scandals >= 5 && !g.vetoDenied;
       return `<h2>Sos Vocero ${A.microfono()}</h2>
-        <p>Tocá la carta que querés <b>triturar</b>. La otra se publica.</p>
+        <p>Tocá la carta que querés <b>publicar</b>. La otra va a La Trituradora.</p>
         <div class="mano">${lista(priv.hand).map((c, i) => `<button class="carta-btn" data-act="descVoc" data-i="${i}">${A.carta(c, i + 3)}</button>`).join('')}</div>
         ${veto ? `<button class="btn grande veto" data-act="pedirVeto">${A.selloVetado()} Proponer VETO</button>` : ''}
         ${g.vetoDenied ? '<p class="nota">El Jefe rechazó el veto: tenés que publicar una.</p>' : ''}`;
@@ -785,6 +797,44 @@ function panelVoz(habla) {
     <span>${textos[v.estado] || '🔊 Esperando el audio…'}</span>
     ${v.estado === 'escuchando' && !v.silenciado ? barra : ''}
     ${boton}
+  </div>`;
+}
+
+function panelCharla(g) {
+  const yo = st.pid;
+  const r = lista(g.history)[lista(g.history).length - 1] || {};
+  const c = r.claims || {};
+  const ch = g.charla || {};
+  const dichos = lista(ch.dichos);
+  const soyHost = st.pub.host === yo && g.alive[yo];
+  return `<h2>📣 ¿Les creés? <small class="sub">Debate abierto</small></h2>
+    <div class="declaraciones-resumen">
+      <p>🪪 Jefe <b>${esc(nombre(r.candidate))}</b>: ${c.chief !== undefined ? A.combo(c.chief, 3) : '—'}</p>
+      <p>🎤 Vocero <b>${esc(nombre(r.nominee))}</b>: ${c.vocero !== undefined ? A.combo(c.vocero, 2) : '—'}</p>
+    </div>
+    <div class="reloj-voto">⏱️ <b data-fin="${ch.fin}">${relojTexto(ch.fin)}</b> s · ${g.alive[yo] ? 'todos pueden hablar a la vez' : 'los fantasmas escuchan en silencio'}</div>
+    ${panelVozCharla(g)}
+    ${dichos.length ? `<div class="dichos-charla">${dichos.map((x) => `<p><b>${esbotMarca(x.pid)}${esc(nombre(x.pid))}:</b> ${esc(x.text)}</p>`).join('')}</div>` : ''}
+    ${soyHost ? '<button class="btn chico" data-act="cortarCharla" data-confirm="¿Terminar el debate abierto y seguir?">⏭️ Seguir</button>' : ''}`;
+}
+
+function panelVozCharla(g) {
+  if (PRACTICA || (st.pub.settings && st.pub.settings.voice === false)) return '';
+  if (!Voz.soportado()) return '<div class="voz"><span>⚠️ Este navegador no permite audio en vivo. Probá con Chrome o Safari actualizados.</span></div>';
+  const v = Voz.estadoActual();
+  const yo = st.pid;
+  const barra = '<span class="vumetro" data-nivel aria-hidden="true"><i></i></span>';
+  const mio = !g.alive[yo] ? '👂 Escuchás el debate.'
+    : v.estado === 'pidiendo-micro' ? '🎙️ Prendiendo tu micrófono… si te pregunta, tocá <b>Permitir</b>.'
+      : v.estado === 'sin-micro' ? '⚠️ No pude usar tu micrófono. Permitilo en el candadito 🔒 y tocá Reintentar.'
+        : v.callado ? '🔇 Te silenciaste.' : '<b>🔴 MICRÓFONOS ABIERTOS</b> · hablá cuando quieras';
+  const otros = v.oyentes ? ` · 🔊 escuchando a ${v.escuchando} de ${v.oyentes}` : '';
+  return `<div class="voz ${v.estado === 'al-aire' && !v.callado ? 'aire' : ''}">
+    <span>${mio}${otros}</span>
+    ${v.estado === 'al-aire' && !v.callado ? barra : ''}
+    ${v.estado === 'al-aire' ? `<button class="btn chico" data-act="callarme">${v.callado ? '🎙️ Hablar' : '🔇 Silenciarme'}</button>` : ''}
+    ${v.bloqueado ? '<button class="btn chico primario" data-act="escucharVoz">🔊 Escuchar</button>' : ''}
+    ${v.estado === 'sin-micro' || v.fallan ? '<button class="btn chico primario" data-act="reintentarVoz">🔄 Reintentar</button>' : ''}
   </div>`;
 }
 
@@ -1287,7 +1337,8 @@ document.addEventListener('click', async (ev) => {
       if (await confirmar('¿Mandás esta carta a La Trituradora?')) jugar({ type: 'chiefDiscard', index: Number(d.i) });
       break;
     case 'descVoc':
-      if (await confirmar('¿Triturás esta carta y publicás la otra?')) jugar({ type: 'voceroDiscard', index: Number(d.i) });
+      // La carta tocada se publica: al reglamento se le manda la OTRA para triturar.
+      if (await confirmar('¿Publicás esta carta? La otra va a La Trituradora.')) jugar({ type: 'voceroDiscard', index: 1 - Number(d.i) });
       break;
     case 'pedirVeto':
       if (await confirmar('¿Proponer VETO al Jefe de Campaña?')) jugar({ type: 'vetoRequest' });
@@ -1349,12 +1400,14 @@ document.addEventListener('click', async (ev) => {
       }
       break;
     case 'reintentarVoz': Voz.reintentar(); break;
+    case 'cortarCharla': jugar({ type: 'charlaFin' }); break;
     case 'declarar': jugar({ type: 'declare', proposals: Number(d.n) }); break;
     case 'ajuste':
       jugar(Object.assign({ type: 'settings' },
         d.debate !== undefined ? { debate: Number(d.debate) }
           : d.vote !== undefined ? { voteTime: Number(d.vote) }
             : d.voice !== undefined ? { voice: d.voice === '1' }
+              : d.charla !== undefined ? { charla: Number(d.charla) }
               : { declare: d.declare === '1' }));
       break;
     case 'revancha': jugar({ type: 'rematch' }); break;
@@ -1412,7 +1465,17 @@ setInterval(() => {
   });
   const g = st.pub && st.pub.game;
   // Tic-tac en los últimos 5 segundos del debate y de la votación.
-  const fin = g && g.phase === 'debate' && g.debate ? g.debate.turnEnd : g && g.phase === 'vote' && !(g.voted && g.voted[st.pid]) ? g.voteEnd : 0;
+  const fin = g && g.phase === 'debate' && g.debate ? g.debate.turnEnd
+    : g && g.phase === 'charla' && g.charla ? g.charla.fin
+      : g && g.phase === 'vote' && !(g.voted && g.voted[st.pid]) ? g.voteEnd : 0;
+  if (g && g.phase === 'charla' && g.charla && ahoraServidor() >= g.charla.fin) {
+    const clave = 'c' + g.round;
+    const reintento = !st.pasado || st.pasado.clave !== clave || Date.now() - st.pasado.t > 2500;
+    if ((st.pub.host === st.pid || !st.presence[st.pub.host]) && reintento) {
+      st.pasado = { clave, t: Date.now() };
+      jugar({ type: 'charlaFin' }, true);
+    }
+  }
   if (fin) {
     const quedan = Math.ceil((fin - ahoraServidor()) / 1000);
     if (quedan > 0 && quedan <= 5 && st.ultimoTic !== fin + '-' + quedan) {

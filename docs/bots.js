@@ -137,6 +137,19 @@ export function decidir(S, mem, esBot, ahora) {
       if (bot(g.vocero) && !ya.vocero) return { pid: g.vocero, action: { type: 'declare', proposals: declarar(S, mem, g.vocero, 'vocero') }, demora: 900 + rnd(900) };
       return null;
     }
+    case 'charla': {
+      // Debate abierto: algunos bots opinan (una vez cada uno), sin apuro.
+      const clave = 'c' + g.round + '-';
+      const pendientes = vivos.filter((p) => bot(p) && !mem.dichos[clave + p]);
+      for (const p of pendientes) {
+        mem.dichos[clave + p] = { t: ahora };
+        if (chance(0.6)) {
+          const quedan = g.charla ? g.charla.fin - ahora : 10000;
+          return { pid: p, action: { type: 'charlaSay', text: reaccion(S, p) }, demora: Math.min(1500 + rnd(4500), Math.max(400, quedan - 3000)) };
+        }
+      }
+      return null;
+    }
     case 'power': {
       const c = g.chief;
       if (!bot(c)) return null;
@@ -299,6 +312,34 @@ const DE_ZONA_ROJA = [
   'Zona roja, gente: el que vota mal al Vocero nos hunde.',
   'Ahora sí: un Vocero equivocado y perdemos la elección.',
 ];
+
+// Lo que dice un bot sobre las declaraciones del Jefe y el Vocero.
+function reaccion(S, p) {
+  const g = S.pub.game;
+  const N = (x) => nombre(S, x);
+  const r = L(g.history)[L(g.history).length - 1] || {};
+  const c = r.claims || {};
+  const j = r.candidate;
+  const v = r.nominee;
+  if (p === j || p === v) {
+    return azar(['Yo dije la verdad, revisen todo lo que quieran.', 'Me llegó lo que dije, no hay más que hablar.', 'Si no me creen, encuéstenme cuando puedan.']);
+  }
+  const op = esOp(S, p);
+  const ami = op ? aliados(S, p) : [];
+  if (op && (ami.includes(j) || ami.includes(v))) {
+    return azar(['Yo les creo: la Mesa de Entradas viene cargada de Escándalos.', 'Mala suerte con las cartas, nada más. Les creo.', 'No busquemos fantasmas donde no hay.']);
+  }
+  const contradicen = c.chief > 0 && c.vocero === 0;
+  if (op) {
+    // Siembra dudas sobre alguno de la Campaña.
+    const blanco = chance(0.5) ? j : v;
+    return azar([`Para mí ${N(blanco)} se guardó la Propuesta.`, `No le creo nada a ${N(blanco)}.`, `${N(blanco)} está mintiendo, se le nota en la cara.`]);
+  }
+  if (contradicen) return `¿${N(j)} dice que pasó una Propuesta y ${N(v)} dice que no le llegó ninguna? Alguno de los dos miente.`;
+  if (r.published === 'E' && c.vocero > 0) return `${N(v)} tenía una Propuesta y publicó un Escándalo. ¡Eso es traición!`;
+  if (r.published === 'P') return azar(['Bien ahí, una Propuesta. Por ahora les creo.', 'Así se hace: Propuesta a la tapa. Les creo.']);
+  return azar([`Tres Escándalos en la mano… qué mala suerte, ¿no? Mmm.`, `Les creo a medias. Los vamos a seguir mirando.`, `Anoten esta: ${N(j)} y ${N(v)} quedan en observación.`]);
+}
 
 function comentario(S, p) {
   const g = S.pub.game;
