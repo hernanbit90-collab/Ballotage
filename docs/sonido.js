@@ -132,16 +132,19 @@ const redoblante = (bus, t, vol = 0.25) => { ruido(bus, { t, dur: 0.12, vol, tip
 
 // ------------------------------------------------------------------ Música
 
-// Tema de campaña original: bombo con ritmo de murga, platillo y una
-// melodía de "bronces" alegre. 8 compases en loop.
-const TEMPO = 112;
-const MELODIA = [ // [nota MIDI, duración en corcheas] (0 = silencio)
-  [67, 2], [72, 1], [72, 1], [74, 2], [76, 2], [74, 1], [72, 1], [69, 2], [67, 4],
-  [65, 2], [69, 1], [69, 1], [72, 2], [74, 2], [72, 1], [69, 1], [67, 6],
-  [67, 2], [72, 1], [72, 1], [74, 2], [76, 2], [79, 2], [77, 1], [76, 1], [74, 4],
-  [72, 2], [74, 1], [76, 1], [74, 2], [71, 2], [72, 8],
+// Marcha de campaña original (compuesta para el juego): compás de 2/4, bombo
+// en el uno, bajo "oom-pah" con golpes de bronces, redoblante de acto,
+// platillo al empezar cada frase y aplausos de la tribuna. 16 compases en loop.
+const TEMPO = 116; // negras por minuto
+const MELODIA = [ // [nota MIDI, duración en corcheas]
+  [62, 1], [67, 1], [67, 1], [71, 1], [74, 2], [71, 2], [72, 1], [71, 1], [69, 1], [67, 1], [69, 4],
+  [62, 1], [66, 1], [66, 1], [69, 1], [72, 2], [69, 2], [71, 1], [69, 1], [67, 1], [66, 1], [67, 4],
+  [74, 1], [74, 1], [76, 1], [74, 1], [72, 2], [71, 2], [72, 1], [72, 1], [74, 1], [72, 1], [71, 2], [69, 2],
+  [67, 1], [71, 1], [74, 1], [79, 1], [78, 2], [76, 2], [74, 1], [72, 1], [71, 1], [69, 1], [67, 4],
 ];
-const BAJOS = [48, 48, 53, 53, 48, 48, 43, 48]; // uno por compás
+// Acorde de cada compás: G G C G | D D G G | C G C G | D D G G
+const ACORDES = ['G', 'G', 'C', 'G', 'D', 'D', 'G', 'G', 'C', 'G', 'C', 'G', 'D', 'D', 'G', 'G'];
+const NOTAS_ACORDE = { G: [43, 67, 71, 74], C: [48, 64, 67, 72], D: [50, 66, 69, 74] }; // [bajo, tríada]
 
 let temaActual = null;
 let temaPedido = null;
@@ -177,22 +180,32 @@ function arrancarLoop() {
   for (const [n, d] of MELODIA) { tiempos.push([acc, n, d]); acc += d; }
   corchea = 0;
   proxCorchea = ctx.currentTime + 0.1;
+  // Murmullo de la tribuna al arrancar.
+  ruido(busMusica, { t: 0, dur: 2.5, vol: 0.05, tipo: 'bandpass', f: 700, q: 0.4 });
   reloj = setInterval(() => {
     while (proxCorchea < ctx.currentTime + 0.25) {
       const t = proxCorchea - ctx.currentTime;
-      const enCompas = corchea % 8;
-      const compas = Math.floor(corchea / 8) % BAJOS.length;
-      // Bombo "de murga": 1, el "y" del 2 y el 4.
-      if (enCompas === 0 || enCompas === 3 || enCompas === 6) bombo(busMusica, t, enCompas === 0 ? 0.8 : 0.55);
-      if (enCompas % 2 === 1) platillo(busMusica, t, 0.06);
-      if (enCompas === 4) redoblante(busMusica, t, 0.12);
-      if (enCompas === 0) tono(busMusica, { f: nota(BAJOS[compas] - 12), t, dur: seg * 3.5, tipo: 'triangle', vol: 0.22, filtro: 500 });
-      if (enCompas === 4) tono(busMusica, { f: nota(BAJOS[compas] - 5), t, dur: seg * 3.5, tipo: 'triangle', vol: 0.18, filtro: 500 });
       const pos = corchea % total;
+      const compas = Math.floor(pos / 4);
+      const enCompas = pos % 4;
+      const [bajo, ...triada] = NOTAS_ACORDE[ACORDES[compas]];
+      // Base de marcha: oom (bajo + bombo) - pah (bronces) - oom (quinta) - pah.
+      if (enCompas === 0) { bombo(busMusica, t, 0.85); tono(busMusica, { f: nota(bajo), t, dur: seg * 1.6, tipo: 'triangle', vol: 0.26, filtro: 600 }); }
+      if (enCompas === 2) { bombo(busMusica, t, 0.45); tono(busMusica, { f: nota(bajo + 7), t, dur: seg * 1.6, tipo: 'triangle', vol: 0.2, filtro: 600 }); }
+      if (enCompas === 1 || enCompas === 3) {
+        triada.forEach((n) => tono(busMusica, { f: nota(n - 12), t, dur: seg * 0.7, tipo: 'square', vol: 0.025, filtro: 1500 }));
+        redoblante(busMusica, t, 0.05);
+      }
+      // Platillo al empezar cada frase y redoble al terminarla.
+      if (enCompas === 0 && compas % 4 === 0) ruido(busMusica, { t, dur: 0.9, vol: 0.1, f: 5000 });
+      if (compas % 4 === 3 && enCompas >= 2) { redoblante(busMusica, t, 0.12); redoblante(busMusica, t + seg / 2, 0.14); }
+      // Aplausos de la tribuna en la segunda mitad del tema.
+      if (compas >= 8 && (enCompas === 1 || enCompas === 3)) ruido(busMusica, { t, dur: 0.05, vol: 0.07, tipo: 'bandpass', f: 1800, q: 1.2 });
+      // Melodía de "bronces" (dos voces).
       for (const [ini, n, d] of tiempos) {
         if (ini === pos && n) {
-          tono(busMusica, { f: nota(n), t, dur: seg * d * 0.95, tipo: 'sawtooth', vol: 0.09, filtro: 1800, ataque: 0.02, vibrato: d > 3 ? 4 : 0 });
-          tono(busMusica, { f: nota(n - 12), t, dur: seg * d * 0.95, tipo: 'square', vol: 0.035, filtro: 1200, ataque: 0.02 });
+          tono(busMusica, { f: nota(n), t, dur: seg * d * 0.92, tipo: 'sawtooth', vol: 0.1, filtro: 2200, ataque: 0.015, vibrato: d >= 4 ? 4 : 0 });
+          tono(busMusica, { f: nota(n - 12), t, dur: seg * d * 0.92, tipo: 'square', vol: 0.03, filtro: 1400, ataque: 0.015 });
         }
       }
       corchea += 1;
