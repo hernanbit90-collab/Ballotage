@@ -937,3 +937,163 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .inicio .logo-arte svg, .accion.entra, .inicio .tarjeta, .final::before, .accion.mi-turno::before { animation: none; }
 }
+
+/* ================================================================
+   Capa "app profesional": marcador fijo, etapas de la ronda,
+   portada en dos columnas en PC y barra con etiquetas.
+   ================================================================ */
+
+/* ---------- Barra + marcador ---------- */
+.barra { flex-wrap: wrap; row-gap: 6px; }
+.btn.icono .lbl { display: none; }
+
+.marcador {
+  flex: 1 0 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 6px;
+}
+.m-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 6px;
+  padding: 5px 8px;
+  border-radius: var(--r-s);
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .08);
+  min-width: 0;
+}
+.m-tit { grid-column: 1 / -1; font-size: .625rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--texto-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-puntos { display: flex; gap: 3px; min-width: 0; }
+.m-puntos i { flex: 1; max-width: 14px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .14); }
+.m-puntos i.p { background: var(--turquesa); box-shadow: 0 0 6px rgba(30, 200, 176, .6); }
+.m-puntos i.e { background: var(--rojo); box-shadow: 0 0 6px rgba(230, 57, 70, .6); }
+.m-puntos i.c { background: var(--naranja); box-shadow: 0 0 6px rgba(255, 122, 26, .6); }
+.m-item b { font-size: var(--t-xs); font-variant-numeric: tabular-nums; font-weight: 800; }
+.m-item.prop b { color: #6ff0dc; }
+.m-item.esc b { color: #ff8a93; }
+.m-item.cri b { color: #ffb072; }
+.m-item.esc.roja { border-color: rgba(230, 57, 70, .55); background: rgba(230, 57, 70, .14); }
+.m-item.ron { grid-template-columns: auto; text-align: center; padding-inline: 10px; }
+.m-item.ron b { font-family: var(--fuente-titulo); font-size: var(--t-m); line-height: 1; color: var(--amarillo); }
+
+/* ---------- Etapas de la ronda (dentro del panel) ---------- */
+.etapas {
+  list-style: none;
+  margin: -2px 0 var(--e3);
+  padding: 0 0 var(--e3);
+  display: flex;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--borde-papel);
+}
+.etapas li {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  color: var(--tinta-2);
+}
+.etapas li + li::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--papel-3);
+  z-index: 0;
+}
+.etapas li.hecha + li::before, .etapas li.hecha + li.ahora::before { background: var(--turquesa); }
+.etapas span {
+  position: relative;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: .6875rem;
+  font-weight: 800;
+  background: var(--papel-2);
+  border: 2px solid var(--papel-3);
+  color: var(--tinta-2);
+}
+.etapas li.hecha span { background: var(--turquesa); border-color: var(--turquesa); color: #fff; }
+.etapas li.ahora span { background: var(--fucsia); border-color: var(--fucsia); color: #fff; box-shadow: 0 0 0 4px rgba(255, 46, 136, .18); }
+.etapas em { font-style: normal; font-size: .625rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.etapas li.ahora em { color: var(--fucsia-osc); font-weight: 800; }
+/* En celular angosto solo se lee el nombre de la etapa actual */
+@media (max-width: 420px) { .etapas li:not(.ahora) em { visibility: hidden; } }
+.accion.mi-turno .etapas { margin-top: 2px; }
+
+/* ---------- Portada ---------- */
+.rasgos { list-style: none; padding: 0; margin: 0 auto var(--e2); display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 460px; }
+.rasgos li { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-xs); color: var(--texto-2); background: rgba(255, 255, 255, .06); border: 1px solid var(--borde); padding: 4px 10px; border-radius: var(--r-pill); }
+.rasgos li b { color: #fff; }
+.rasgos li span { font-size: .9rem; }
+.inicio .campo input { box-shadow: inset 0 2px 4px rgba(29, 26, 43, .08); }
+
+/* ---------- Tablet y PC ---------- */
+@media (min-width: 700px) {
+  .m-item { padding: 6px 12px; }
+  .m-tit { font-size: .6875rem; }
+  .m-puntos i { height: 8px; max-width: 22px; }
+  .m-item b { font-size: var(--t-s); }
+  .etapas em { font-size: var(--t-xs); }
+  .etapas span { width: 26px; height: 26px; font-size: var(--t-xs); }
+  .etapas li + li::before { top: 12px; }
+}
+
+@media (min-width: 1000px) {
+  /* Barra de app: logo, sala, botones con nombre y marcador en la misma línea */
+  .barra { flex-wrap: nowrap; padding: 10px var(--e4); margin-inline: 0; margin-bottom: var(--e5); border-radius: 0 0 var(--r-xl) var(--r-xl); }
+  .barra .logo-chico { flex: none; font-size: var(--t-xl); }
+  .barra .codigo-mini { order: 2; }
+  .barra .marcador { order: 1; flex: 1 1 auto; max-width: 620px; margin: 0 auto; }
+  .barra .btn.icono { order: 3; width: auto; padding: 0 12px; gap: 6px; font-size: 1rem; }
+  .btn.icono .lbl { display: inline; font-size: var(--t-s); font-weight: 600; }
+
+  /* Portada: presentación a la izquierda, formulario a la derecha */
+  #app.inicio {
+    max-width: 1080px;
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 460px;
+    column-gap: 72px;
+    align-content: center;
+    padding-block: var(--e6);
+  }
+  #app.inicio > * { grid-column: 2; }
+  #app.inicio > .portada {
+    grid-column: 1;
+    grid-row: 1 / span 40;
+    align-self: center;
+    text-align: left;
+    padding: 0;
+  }
+  .inicio .logo-arte svg { width: min(420px, 100%); }
+  .inicio .bajada { font-size: var(--t-xl); font-weight: 700; color: #fff; margin: var(--e4) 0 var(--e5); max-width: 460px; line-height: 1.3; }
+  .inicio .rasgos { flex-direction: column; align-items: flex-start; margin: 0; gap: var(--e3); }
+  .inicio .rasgos li { font-size: var(--t-m); background: none; border: 0; padding: 0; gap: var(--e3); }
+  .inicio .rasgos li span { width: 40px; height: 40px; border-radius: var(--r-m); display: grid; place-items: center; font-size: 1.2rem; background: rgba(255, 255, 255, .08); border: 1px solid var(--borde); }
+  #app.inicio > .tarjeta, #app.inicio > form.tarjeta { padding: var(--e5); }
+}
+.rasgos li p { margin: 0; }
+@media (max-width: 439px) {
+  .marcador { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .m-item.ron { display: none; } /* la ronda ya se ve en el centro de la mesa */
+  .m-tit { letter-spacing: .04em; }
+}
+/* La fila del logo nunca se parte: el logo y el código de sala se achican primero */
+.barra .logo-chico { flex: 1 1 0; min-width: 0; overflow: hidden; white-space: nowrap; }
+.barra .codigo-mini { min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
+@media (min-width: 1000px) { .barra .logo-chico { flex: none; overflow: visible; } }
+@media (max-width: 439px) {
+  .barra .codigo-mini { display: none; } /* el código de sala sigue en el Menú */
+  .barra .btn.icono { width: 38px; min-height: 38px; }
+}

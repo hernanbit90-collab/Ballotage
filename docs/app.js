@@ -170,15 +170,25 @@ function escucharSala(base, pid) {
 
 // ------------------------------------------------------------------ Pantalla de inicio
 
+// Logo y presentación. En PC queda a la izquierda, con el formulario a la derecha.
+function portada() {
+  return `<div class="portada">
+      ${A.logo()}
+      <p class="bajada">El juego donde la campaña se pudre desde adentro.</p>
+      <ul class="rasgos">
+        <li><span>👥</span><p><b>5 a 10</b> jugadores, cada uno en su celu</p></li>
+        <li><span>🕵️</span><p>Roles secretos y un <b>Topo</b> infiltrado</p></li>
+        <li><span>🎙️</span><p>Debate en vivo con <b>micrófono</b></p></li>
+      </ul>
+    </div>`;
+}
+
 function pantallaPractica() {
   Son.musica('inicio');
   setTimeout(botonSonido, 0);
   $app.className = 'inicio';
   $app.innerHTML = `
-    <div class="portada">
-      ${A.logo()}
-      <p class="bajada">El juego donde la campaña se pudre desde adentro.</p>
-    </div>
+    ${portada()}
     <div class="aviso practica">🤖 <b>Modo práctica</b>: jugás vos contra bots, en este celular. ${configurado ? '' : 'Para jugar online con amigos hay que configurar Firebase (ver COMO_PUBLICAR.md).'}</div>
     <label class="campo">Tu apodo
       <input id="apodo" maxlength="16" autocomplete="nickname" placeholder="Ej: La Tana" value="${esc(guardado.get('name') || '')}">
@@ -230,10 +240,7 @@ function pantallaLogin(modo = 'entrar') {
   const crear = modo === 'crear';
   const olvido = modo === 'olvido';
   $app.innerHTML = `
-    <div class="portada">
-      ${A.logo()}
-      <p class="bajada">El juego donde la campaña se pudre desde adentro.</p>
-    </div>
+    ${portada()}
     <form class="tarjeta login" id="form-login" novalidate>
       <h3>${crear ? 'Crear tu cuenta' : olvido ? 'Recuperar la contraseña' : 'Entrá con tu mail'}</h3>
       ${crear ? `<label class="campo">Tu apodo en el juego
@@ -309,10 +316,7 @@ function pantallaInicio() {
   const codigo = (params.get('sala') || '').toUpperCase();
   $app.className = 'inicio';
   $app.innerHTML = `
-    <div class="portada">
-      ${A.logo()}
-      <p class="bajada">El juego donde la campaña se pudre desde adentro.</p>
-    </div>
+    ${portada()}
     <div class="sesion">👤 <span>${esc(yo && (yo.email || yo.displayName) || '')}</span> <button class="btn link" data-act="cerrarSesion">Cerrar sesión</button></div>
     <label class="campo">Tu apodo
       <input id="apodo" maxlength="16" autocomplete="nickname" placeholder="Ej: La Tana" value="${esc(guardado.get('name') || (yo && yo.displayName) || '')}">
@@ -520,16 +524,17 @@ function pantallaJuego() {
     <header class="barra">
       ${A.logoChico()}
       <span class="codigo-mini">Sala ${st.code}</span>
-      <button class="btn icono" data-act="modal" data-m="sonido" aria-label="Sonido">${Son.preferencias().musica || Son.preferencias().efectos ? '🔊' : '🔇'}</button>
-      <button class="btn icono" data-act="modal" data-m="rol" aria-label="Mi rol">🪪</button>
-      <button class="btn icono" data-act="modal" data-m="historial" aria-label="Historial">🗂️</button>
-      <button class="btn icono" data-act="modal" data-m="menu" aria-label="Menú">☰</button>
+      <button class="btn icono" data-act="modal" data-m="sonido" aria-label="Sonido">${Son.preferencias().musica || Son.preferencias().efectos ? '🔊' : '🔇'}<span class="lbl">Sonido</span></button>
+      <button class="btn icono" data-act="modal" data-m="rol" aria-label="Mi rol">🪪<span class="lbl">Mi rol</span></button>
+      <button class="btn icono" data-act="modal" data-m="historial" aria-label="Historial">🗂️<span class="lbl">Historial</span></button>
+      <button class="btn icono" data-act="modal" data-m="menu" aria-label="Menú">☰<span class="lbl">Menú</span></button>
+      ${marcador(g)}
     </header>
     ${avisoAnfitrion()}
     ${!vivo && !terminado ? `<div class="aviso fantasma">👻 Te hicieron un Carpetazo. Ya no votás ni hablás: mirá en silencio.</div>` : ''}
     ${terminado ? pantallaFinal(g) : ''}
     <div class="cuerpo">
-      <section class="accion${miTurno ? ' mi-turno' : ''}${entra ? ' entra' : ''}">${panel}</section>
+      <section class="accion${miTurno ? ' mi-turno' : ''}${entra ? ' entra' : ''}">${panel ? etapas(g) + panel : ''}</section>
       ${filaJugadores(g)}
       ${tablero(g)}
       <section class="cronica">
@@ -544,6 +549,34 @@ function pantallaJuego() {
     st.modal = 'rol';
     dibujarModal();
   }
+}
+
+// Marcador fijo arriba: cómo va la elección sin tener que bajar hasta el tablero.
+function marcador(g) {
+  const puntos = (n, total, clase) => Array.from({ length: total }, (_, i) => `<i class="${i < n ? clase : ''}"></i>`).join('');
+  return `<div class="marcador" role="status" aria-label="Propuestas ${g.proposals} de 5, Escándalos ${g.scandals} de 6, Crisis ${g.crisis || 0} de 3">
+      <div class="m-item prop"><span class="m-tit">Propuestas</span><span class="m-puntos">${puntos(g.proposals, 5, 'p')}</span><b>${g.proposals}/5</b></div>
+      <div class="m-item esc${g.scandals >= 3 ? ' roja' : ''}"><span class="m-tit">Escándalos</span><span class="m-puntos">${puntos(g.scandals, 6, 'e')}</span><b>${g.scandals}/6</b></div>
+      <div class="m-item cri"><span class="m-tit">Crisis</span><span class="m-puntos">${puntos(g.crisis || 0, 3, 'c')}</span><b>${g.crisis || 0}/3</b></div>
+      <div class="m-item ron"><span class="m-tit">Ronda</span><b>${g.round || 1}</b></div>
+    </div>`;
+}
+
+// Las etapas de cada ronda, con la actual marcada.
+const ETAPAS = [
+  ['Fórmula', ['nominate']],
+  ['Debate', ['debate']],
+  ['Votación', ['vote']],
+  ['Cartas', ['chiefDiscard', 'voceroDiscard', 'vetoReply']],
+  ['¿Les creés?', ['declare', 'charla']],
+];
+function etapas(g) {
+  if (g.phase === 'ended') return '';
+  const lista_ = g.phase === 'power' ? ETAPAS.concat([['Poder', ['power']]]) : ETAPAS;
+  const actual = lista_.findIndex(([, fases]) => fases.includes(g.phase));
+  if (actual < 0) return '';
+  return `<ol class="etapas" aria-label="Etapa ${actual + 1} de ${lista_.length}: ${lista_[actual][0]}">${lista_.map(([nom], i) =>
+    `<li class="${i < actual ? 'hecha' : i === actual ? 'ahora' : ''}"${i === actual ? ' aria-current="step"' : ''}><span>${i < actual ? '✓' : i + 1}</span><em>${nom}</em></li>`).join('')}</ol>`;
 }
 
 function avisoAnfitrion() {
