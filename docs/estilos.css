@@ -797,3 +797,143 @@ h2 .sub { font-size: .7em; font-weight: 600; opacity: .7; margin-left: 4px; }
 .declaraciones-resumen p { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .dichos-charla { display: grid; gap: 6px; margin: 8px 0; max-height: 180px; overflow-y: auto; }
 .dichos-charla p { margin: 0; background: var(--papel-2); border-radius: 12px 12px 12px 4px; padding: 6px 10px; font-size: .86rem; animation: asomar .3s ease-out; }
+
+/* ================================================================
+   Acabado visual: textura de afiche, brillos y movimiento suave.
+   Todo es decorativo; si el celular pide "menos movimiento", se apaga.
+   ================================================================ */
+
+/* Fondo: noche de campaña con luces de escenario y trama de afiche impreso */
+body {
+  background:
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, .05) 1px, transparent 1.5px) 0 0 / 14px 14px,
+    radial-gradient(70% 40% at 50% -8%, rgba(255, 210, 63, .14), transparent 70%),
+    radial-gradient(120% 60% at 0% -10%, rgba(255, 46, 136, .30), transparent 60%),
+    radial-gradient(90% 50% at 110% 0%, rgba(30, 200, 176, .24), transparent 60%),
+    radial-gradient(100% 60% at 50% 115%, rgba(123, 63, 196, .35), transparent 70%),
+    var(--noche);
+  background-attachment: fixed;
+}
+
+/* Barra de arriba: se queda pegada y esmerilada al bajar */
+.barra {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin-inline: calc(-1 * var(--e2));
+  padding: 6px var(--e2);
+  border-radius: 0 0 var(--r-l) var(--r-l);
+  background: rgba(27, 20, 70, .72);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  backdrop-filter: blur(10px) saturate(1.3);
+  box-shadow: 0 1px 0 var(--borde), 0 8px 20px rgba(8, 4, 30, .25);
+}
+.btn.icono { transition: background var(--rapido), transform var(--rapido); }
+@media (hover: hover) { .btn.icono:hover { background: var(--sup-3); } }
+
+/* Tarjetas de vidrio con borde que brilla arriba */
+.tarjeta, .lista-jugadores li {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .03));
+  border-color: rgba(255, 255, 255, .12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10), 0 6px 18px rgba(8, 4, 30, .18);
+}
+
+/* Botones con volumen: brillo arriba, canto abajo */
+.btn.primario {
+  background: linear-gradient(180deg, #ffe066 0%, var(--amarillo) 55%, #f5b82e 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 3px 0 #b9820f, 0 8px 18px rgba(255, 190, 40, .25);
+}
+.btn.primario:active { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 1px 0 #b9820f; }
+.btn.secundario {
+  background: linear-gradient(180deg, #3ee0c6, var(--turquesa) 60%, #16a993);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 3px 0 var(--turquesa-osc);
+}
+.btn.peligro, .btn.veto {
+  background: linear-gradient(180deg, #f2545f, var(--rojo) 60%, #c92a37);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 3px 0 #8f1722;
+}
+.btn.whatsapp { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 3px 0 #179a4a; }
+.btn.cant.elegida {
+  background: linear-gradient(180deg, #ffe066, var(--amarillo));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 2px 6px rgba(255, 190, 40, .35);
+}
+
+/* El panel de acción parece un afiche pegado con cinta */
+.accion {
+  background:
+    radial-gradient(circle at 1px 1px, rgba(29, 26, 43, .045) 1px, transparent 1.4px) 0 0 / 10px 10px,
+    linear-gradient(180deg, #fffdf4, var(--papel));
+  box-shadow: inset 0 0 0 1px rgba(29, 26, 43, .06), var(--sombra-2);
+}
+.accion:not(.mi-turno)::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 72px;
+  height: 16px;
+  transform: translateX(-50%) rotate(-2deg);
+  background: rgba(255, 255, 255, .55);
+  border-left: 2px dashed rgba(29, 26, 43, .08);
+  border-right: 2px dashed rgba(29, 26, 43, .08);
+  box-shadow: 0 1px 3px rgba(8, 4, 30, .15);
+  pointer-events: none;
+}
+.accion.mi-turno { box-shadow: 0 0 0 3px var(--fucsia), 0 0 28px rgba(255, 46, 136, .45), var(--sombra-2); }
+.accion.mi-turno::before { animation: latir 1.6s ease-in-out infinite; }
+
+/* Código de sala: como una credencial */
+.codigo-sala {
+  background: linear-gradient(180deg, #fffdf4, var(--papel));
+  border: 2px dashed rgba(255, 46, 136, .35);
+  box-shadow: var(--sombra-2);
+}
+.codigo-sala strong { text-shadow: 2px 2px 0 rgba(255, 210, 63, .9); }
+
+/* Mesa: un foco de luz encima del paño */
+.mesa::before {
+  content: '';
+  position: absolute;
+  inset: 8% 10%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 230, 150, .16), transparent);
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: screen;
+}
+.mesa-centro { -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); box-shadow: 0 6px 16px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255, 255, 255, .1); }
+
+/* Pantalla final: papelitos que caen */
+.final { position: relative; overflow: hidden; isolation: isolate; }
+.final::before {
+  content: '';
+  position: absolute;
+  inset: -40% 0 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .55;
+  background:
+    linear-gradient(var(--amarillo), var(--amarillo)) 8% 0 / 6px 10px no-repeat,
+    linear-gradient(#fff, #fff) 22% 18% / 5px 9px no-repeat,
+    linear-gradient(var(--fucsia), var(--fucsia)) 37% 6% / 6px 10px no-repeat,
+    linear-gradient(var(--cielo), var(--cielo)) 52% 24% / 5px 8px no-repeat,
+    linear-gradient(var(--naranja), var(--naranja)) 66% 3% / 6px 10px no-repeat,
+    linear-gradient(#fff, #fff) 79% 15% / 5px 9px no-repeat,
+    linear-gradient(var(--amarillo), var(--amarillo)) 92% 9% / 6px 10px no-repeat;
+  animation: papelitos 3.2s linear infinite;
+}
+
+/* Logo de la portada: flota apenas */
+.inicio .logo-arte svg { animation: flotar 4s ease-in-out infinite; }
+
+/* Entradas suaves: el panel solo cuando cambia la etapa (la página se redibuja seguido) */
+.accion.entra, .inicio .tarjeta { animation: entrar-suave .35s ease-out both; }
+
+@keyframes entrar-suave { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes flotar { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-5px) rotate(1deg); } }
+@keyframes latir { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@keyframes papelitos { from { transform: translateY(0); } to { transform: translateY(40%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .inicio .logo-arte svg, .accion.entra, .inicio .tarjeta, .final::before, .accion.mi-turno::before { animation: none; }
+}

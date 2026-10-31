@@ -511,6 +511,10 @@ function pantallaJuego() {
   if (!PRACTICA) Son.atenuar(['al-aire', 'escuchando'].includes(Voz.estadoActual().estado));
   if (miTurno && !st.miTurnoPrev) Son.efecto('turno');
   st.miTurnoPrev = !!miTurno;
+  // El panel entra con una animación solo cuando cambia la etapa, no en cada redibujo.
+  const etapa = g.round + '-' + g.phase + '-' + (miTurno ? 1 : 0);
+  const entra = st.etapaVista !== etapa;
+  st.etapaVista = etapa;
   $app.className = 'juego';
   $app.innerHTML = `
     <header class="barra">
@@ -525,7 +529,7 @@ function pantallaJuego() {
     ${!vivo && !terminado ? `<div class="aviso fantasma">👻 Te hicieron un Carpetazo. Ya no votás ni hablás: mirá en silencio.</div>` : ''}
     ${terminado ? pantallaFinal(g) : ''}
     <div class="cuerpo">
-      <section class="accion${miTurno ? ' mi-turno' : ''}">${panel}</section>
+      <section class="accion${miTurno ? ' mi-turno' : ''}${entra ? ' entra' : ''}">${panel}</section>
       ${filaJugadores(g)}
       ${tablero(g)}
       <section class="cronica">
