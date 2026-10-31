@@ -115,7 +115,7 @@ const ahoraServidor = () => Date.now() + st.desfase;
 // ------------------------------------------------------------------ Conexión a una sala
 
 function salirDeSala(msg) {
-  if (PRACTICA) Practica.detener();
+  if (PRACTICA) { Practica.detener(); Voz.microPractica(false); }
   if (GRATIS && !PRACTICA) Anfitrion.detener();
   if (!PRACTICA) { Voz.cortar(); Voz.sala(null, null); }
   st.cancelar.forEach((f) => f());
@@ -480,6 +480,10 @@ function pantallaJuego() {
   if (!g) return;
   detectarNovedades(g);
   if (!PRACTICA) Voz.actualizar(g, st.pub.settings, st.pub.host === st.pid, esBotPid);
+  else {
+    const hablo = (g.phase === 'debate' && g.debate && lista(g.debate.order)[g.debate.idx] === st.pid) || (g.phase === 'charla' && g.alive[st.pid]);
+    Voz.microPractica(hablo && Voz.soportado(), () => dibujar());
+  }
   // Si habla un bot, se escucha lo que escribió (una sola vez por turno).
   if (g.phase === 'debate' && g.debate && g.debate.say && g.debate.say.idx === g.debate.idx) {
     const clave = g.round + '-' + g.debate.idx + '-' + g.debate.say.text.length;
@@ -803,7 +807,8 @@ function panelDebate(g) {
 
 function panelVoz(habla) {
   if (esBotPid(habla)) return `<div class="voz"><span>🤖 <b>${esc(nombre(habla))}</b> es un bot: dice lo suyo por escrito${Habla.activa() ? ' y en voz alta' : ''}.</span></div>`;
-  if (PRACTICA || (st.pub.settings && st.pub.settings.voice === false)) return '';
+  if (PRACTICA) return habla === st.pid ? vozPractica('Los bots no escuchan audio: es para que veas que tu micrófono anda.') : '';
+  if (st.pub.settings && st.pub.settings.voice === false) return '';
   if (!Voz.soportado()) return '<div class="voz"><span>⚠️ Este navegador no permite audio en vivo. Probá con Chrome o Safari actualizados.</span></div>';
   const v = Voz.estadoActual();
   const barra = '<span class="vumetro" data-nivel aria-hidden="true"><i></i></span>';
@@ -855,8 +860,25 @@ function panelCharla(g) {
     ${soyHost ? '<button class="btn chico" data-act="cortarCharla" data-confirm="¿Terminar el debate abierto y seguir?">⏭️ Seguir</button>' : ''}`;
 }
 
+// Barra del micrófono en el modo práctica (sin conexión con nadie).
+function vozPractica(aclaracion) {
+  if (!Voz.soportado()) return '<div class="voz"><span>⚠️ Este navegador no permite usar el micrófono.</span></div>';
+  const v = Voz.estadoPractica();
+  const textos = {
+    'pidiendo-micro': '🎙️ Prendiendo tu micrófono… si te pregunta, tocá <b>Permitir</b>.',
+    'sin-micro': '⚠️ No pude usar tu micrófono. Tocá el candadito 🔒 de la barra de arriba y permitilo.',
+    'al-aire': v.callado ? '🔇 Te silenciaste.' : '<b>🔴 AL AIRE</b> · práctica',
+  };
+  return `<div class="voz ${v.estado === 'al-aire' && !v.callado ? 'aire' : ''}">
+    <span>${textos[v.estado] || '🎙️ Preparando el micrófono…'}${v.estado === 'al-aire' ? `<small class="aclara">${aclaracion}</small>` : ''}</span>
+    ${v.estado === 'al-aire' && !v.callado ? '<span class="vumetro" data-nivel aria-hidden="true"><i></i></span>' : ''}
+    ${v.estado === 'al-aire' ? `<button class="btn chico" data-act="callarme">${v.callado ? '🎙️ Volver a hablar' : '🔇 Silenciarme'}</button>` : ''}
+  </div>`;
+}
+
 function panelVozCharla(g) {
-  if (PRACTICA || (st.pub.settings && st.pub.settings.voice === false)) return '';
+  if (PRACTICA) return g.alive[st.pid] ? vozPractica('Micrófonos abiertos. Los bots responden por escrito y en voz alta.') : '';
+  if (st.pub.settings && st.pub.settings.voice === false) return '';
   if (!Voz.soportado()) return '<div class="voz"><span>⚠️ Este navegador no permite audio en vivo. Probá con Chrome o Safari actualizados.</span></div>';
   const v = Voz.estadoActual();
   const yo = st.pid;
@@ -1432,7 +1454,9 @@ document.addEventListener('click', async (ev) => {
       dibujarModal();
       toast('¡Listo! Así te van a ver en la mesa.');
       break;
-    case 'callarme': Voz.callarme(!Voz.estadoActual().callado); break;
+    case 'callarme':
+      if (PRACTICA) { Voz.callarmePractica(!Voz.estadoPractica().callado); dibujar(); } else Voz.callarme(!Voz.estadoActual().callado);
+      break;
     case 'silenciarVoz': Voz.silenciarAudio(!Voz.estadoActual().silenciado); break;
     case 'escucharVoz': Voz.tocarParaEscuchar(); break;
     case 'probarMicro':

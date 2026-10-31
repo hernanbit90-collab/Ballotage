@@ -396,3 +396,41 @@ async function conectar(clave, orador, sesionOrador, o) {
     fallo();
   }
 }
+
+// ------------------------------------------------------------------ Modo práctica
+
+// En la práctica no hay nadie del otro lado (los bots no escuchan audio), pero el
+// micrófono igual se prende para que veas la barrita y sepas que anda.
+let practica = null; // { estado, stream }
+export async function microPractica(prender, alCambiar) {
+  if (!prender) {
+    if (practica) {
+      if (practica.stream) practica.stream.getTracks().forEach((t) => t.stop());
+      practica = null;
+      pararMedidor();
+      callado = false;
+    }
+    return;
+  }
+  if (practica) return;
+  practica = { estado: 'pidiendo-micro', stream: null };
+  const yo = practica;
+  if (alCambiar) alCambiar();
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    if (practica !== yo) { s.getTracks().forEach((t) => t.stop()); return; }
+    yo.stream = s;
+    yo.estado = 'al-aire';
+    const c = contextoAudio();
+    if (c && c.state === 'suspended') await c.resume().catch(() => {});
+    medir(s);
+  } catch {
+    if (practica === yo) yo.estado = 'sin-micro';
+  }
+  if (alCambiar) alCambiar();
+}
+export const estadoPractica = () => (practica ? { estado: practica.estado, callado, nivel } : { estado: 'apagado', callado, nivel });
+export function callarmePractica(si) {
+  callado = si;
+  if (practica && practica.stream) practica.stream.getAudioTracks().forEach((t) => { t.enabled = !si; });
+}

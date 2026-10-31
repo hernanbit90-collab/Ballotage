@@ -1097,3 +1097,4 @@ body {
   .barra .codigo-mini { display: none; } /* el código de sala sigue en el Menú */
   .barra .btn.icono { width: 38px; min-height: 38px; }
 }
+.voz .aclara { display: block; opacity: .75; font-size: .6875rem; margin-top: 2px; }
