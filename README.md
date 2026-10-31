@@ -4,6 +4,9 @@ Ballotage: el juego online donde la campaña se pudre desde adentro. Entre 5 y 1
 ## 🎮 Jugar
 **https://ballotage-juego.web.app** (también en https://hernanbit90-collab.github.io/Ballotage/)
 
+## Guía completa
+Abrí **[GUIA.html](GUIA.html)** (doble clic): reglas, cómo armar una partida, cómo funciona por dentro y qué hay en cada archivo.
+
 ## Para publicarlo
 Seguí la guía paso a paso: **[COMO_PUBLICAR.md](COMO_PUBLICAR.md)**.
 
