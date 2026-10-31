@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guía de BALLOTAGE</title>
+<style>
+  :root {
+    --fondo: #f7f4ec; --papel: #ffffff; --tinta: #1d1a2b; --tinta-2: #5b5672; --borde: #e3dccb;
+    --fucsia: #d81b6f; --turquesa: #0b8a78; --amarillo: #ffd23f; --rojo: #c92a37; --noche: #1b1446;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --fondo: #15102f; --papel: #211a4a; --tinta: #f3f0ff; --tinta-2: #b9b3d6; --borde: #3a3170;
+      --fucsia: #ff5aa5; --turquesa: #3ee0c6; --rojo: #ff7782;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--tinta); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header.tapa { background: var(--noche); color: #fff; padding: 40px 16px 32px; text-align: center; }
+  header.tapa h1 { margin: 0; font: 900 clamp(2.2rem, 7vw, 3.4rem)/1 "Arial Black", system-ui, sans-serif; letter-spacing: .02em; color: var(--amarillo); text-shadow: 3px 3px 0 #ff2e88; }
+  header.tapa p { margin: 12px auto 0; max-width: 560px; color: #d9d4f5; }
+  header.tapa a.jugar { display: inline-block; margin-top: 20px; background: var(--amarillo); color: #1d1a2b; font-weight: 800; padding: 12px 22px; border-radius: 12px; text-decoration: none; box-shadow: 0 3px 0 #b9820f; }
+  nav.indice { position: sticky; top: 0; z-index: 2; background: var(--papel); border-bottom: 1px solid var(--borde); overflow-x: auto; white-space: nowrap; padding: 10px 16px; }
+  nav.indice a { color: var(--tinta-2); text-decoration: none; font-weight: 600; font-size: .9rem; margin-right: 18px; }
+  nav.indice a:hover { color: var(--fucsia); }
+  main { max-width: 820px; margin: 0 auto; padding: 8px 16px 64px; }
+  section { background: var(--papel); border: 1px solid var(--borde); border-radius: 16px; padding: 20px 22px; margin: 20px 0; }
+  h2 { margin: 0 0 10px; font-size: 1.45rem; }
+  h2 .n { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--fucsia); color: #fff; font-size: .95rem; margin-right: 8px; vertical-align: 3px; }
+  h3 { margin: 18px 0 6px; font-size: 1.08rem; }
+  p, li { color: var(--tinta); }
+  .suave { color: var(--tinta-2); }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: .95rem; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--borde); }
+  th { color: var(--tinta-2); font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+  .caja { border-left: 4px solid var(--turquesa); background: color-mix(in srgb, var(--turquesa) 9%, transparent); padding: 10px 14px; border-radius: 0 10px 10px 0; margin: 12px 0; }
+  .caja.ojo { border-color: var(--rojo); background: color-mix(in srgb, var(--rojo) 8%, transparent); }
+  code { background: color-mix(in srgb, var(--tinta) 8%, transparent); padding: 1px 6px; border-radius: 6px; font-size: .9em; }
+  .rol { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+  .rol div { border: 1px solid var(--borde); border-radius: 12px; padding: 12px 14px; }
+  .rol b { display: block; font-size: 1.05rem; }
+  .rol .c { border-top: 5px solid var(--turquesa); } .rol .o { border-top: 5px solid var(--rojo); } .rol .t { border-top: 5px solid var(--noche); }
+  @media (max-width: 600px) {
+    table { display: block; overflow-x: auto; }
+    section { padding: 16px; }
+  }
+  code { overflow-wrap: anywhere; }
+  td { min-width: 90px; }
+  footer { text-align: center; color: var(--tinta-2); font-size: .85rem; padding: 0 16px 40px; }
+</style>
+</head>
+<body>
+
+<header class="tapa">
+  <h1>BALLOTAGE</h1>
+  <p>El juego online donde la campaña se pudre desde adentro. De 5 a 10 jugadores, cada uno en su celular, con roles secretos y un Topo infiltrado.</p>
+  <a class="jugar" href="https://ballotage-juego.web.app">🎮 Jugar ahora: ballotage-juego.web.app</a>
+</header>
+
+<nav class="indice">
+  <a href="#rapido">Arranque rápido</a>
+  <a href="#partida">Armar una partida</a>
+  <a href="#roles">Roles</a>
+  <a href="#ronda">Una ronda</a>
+  <a href="#ganar">Cómo se gana</a>
+  <a href="#poderes">Poderes</a>
+  <a href="#pantalla">La pantalla</a>
+  <a href="#extras">Micrófono, bots y más</a>
+  <a href="#faq">Preguntas</a>
+  <a href="#dentro">Cómo funciona por dentro</a>
+  <a href="#archivos">Archivos</a>
+  <a href="#cambiar">Cambiar y publicar</a>
+</nav>
+
+<main>
+
+<section id="rapido">
+  <h2><span class="n">1</span>Arranque rápido</h2>
+  <ol>
+    <li>Abrí <b>https://ballotage-juego.web.app</b> en el celular o la PC.</li>
+    <li>Entrá con tu <b>mail</b> (la primera vez: "Soy nuevo: crear cuenta") o con <b>Google</b>.</li>
+    <li>Poné tu apodo. Una persona <b>crea la sala</b> y les pasa el código de 4 letras a los demás.</li>
+    <li>Con 5 a 10 adentro, el que creó la sala toca <b>"¡Largar la campaña!"</b>.</li>
+  </ol>
+  <p>¿Querés probar solo? En la pantalla de ingreso tocá <b>"🤖 Practicar contra bots (sin cuenta)"</b>, o entrá a <b>ballotage-juego.web.app/?practica</b>.</p>
+  <div class="caja">Lo ideal es jugar todos en la misma mesa o en una videollamada. Igual la app trae <b>micrófono incorporado</b> para el debate.</div>
+</section>
+
+<section id="partida">
+  <h2><span class="n">2</span>Armar una partida (el administrador)</h2>
+  <ol>
+    <li>El administrador entra, pone su apodo y toca <b>"Crear sala nueva"</b>. Aparece un <b>código de 4 letras</b>.</li>
+    <li>Toca <b>"💬 Invitar por WhatsApp"</b> y elige el grupo: el mensaje lleva el link con el código ya cargado. También puede tocar <b>"🔗 Copiar link"</b> o dictar el código.</li>
+    <li>Cada invitado abre el link, entra con su mail, pone su apodo y toca <b>"Entrar"</b>. El punto verde indica que está conectado.</li>
+    <li><b>Si faltan jugadores</b>, el administrador puede tocar <b>"🤖 Agregar un bot"</b>. Los bots votan, debaten por escrito y en voz alta, y juegan con estrategia según su rol.</li>
+    <li>El administrador configura la partida y toca <b>"¡Largar la campaña!"</b>. A cada uno le llega su rol secreto.</li>
+  </ol>
+  <h3>Ajustes que elige el administrador</h3>
+  <table>
+    <tr><th>Ajuste</th><th>Opciones</th><th>Para qué sirve</th></tr>
+    <tr><td>🎙️ Debate antes de votar</td><td>Sin, 15, 30, 45, 60, 90 s</td><td>Cuánto habla cada uno antes de votar.</td></tr>
+    <tr><td>⏱️ Tiempo para votar</td><td>Sin, 20, 30, 45, 60, 90 s</td><td>Si no votás a tiempo, tu boleta cuenta como <b>¡Sí!</b></td></tr>
+    <tr><td>🗣️ Declaraciones</td><td>Sí / No</td><td>El Jefe y el Vocero cuentan qué cartas vieron.</td></tr>
+    <tr><td>📣 Debate abierto ("¿Les creés?")</td><td>Sin, 30, 45, 60 s</td><td>Después de las declaraciones, se abren los micrófonos de todos a la vez para discutir.</td></tr>
+    <tr><td>🎧 Audio en el debate</td><td>Sí / No</td><td>Si el debate se hace con el audio de la app.</td></tr>
+  </table>
+  <p class="suave">El administrador también puede sacar a alguien que se coló.</p>
+  <div class="caja ojo"><b>Importante en el modo gratis:</b> el celular del administrador hace de árbitro. Si lo cierra, la partida queda en pausa hasta que lo vuelva a abrir. Conviene que lo tenga enchufado y con la pantalla prendida.</div>
+</section>
+
+<section id="roles">
+  <h2><span class="n">3</span>Los roles</h2>
+  <p>Hay elecciones en la República de Ballotagia y todos están en el búnker de campaña. Pero <b>entre ustedes hay infiltrados del rival</b>.</p>
+  <div class="rol">
+    <div class="c"><b>Equipo de Campaña</b>Son mayoría. Quieren ganar limpio: publicar Propuestas y descubrir al Topo.</div>
+    <div class="o"><b>Operadores del Rival</b>Quieren hundir la campaña. Saben quiénes son sus compañeros y quién es El Topo.</div>
+    <div class="t"><b>El Topo</b>Juega con los Operadores. Con 5 o 6 jugadores sabe quiénes son sus Operadores; con 7 o más, no.</div>
+  </div>
+  <h3>Cuántos hay de cada uno</h3>
+  <table>
+    <tr><th>Jugadores</th><th>Campaña</th><th>Operadores</th><th>Topo</th></tr>
+    <tr><td>5</td><td>3</td><td>1</td><td>1</td></tr>
+    <tr><td>6</td><td>4</td><td>1</td><td>1</td></tr>
+    <tr><td>7</td><td>4</td><td>2</td><td>1</td></tr>
+    <tr><td>8</td><td>5</td><td>2</td><td>1</td></tr>
+    <tr><td>9</td><td>5</td><td>3</td><td>1</td></tr>
+    <tr><td>10</td><td>6</td><td>3</td><td>1</td></tr>
+  </table>
+  <p>El mazo tiene <b>17 cartas</b>: 6 Propuestas y 11 Escándalos. Cuando quedan menos de 3, se mezcla de nuevo con La Trituradora.</p>
+</section>
+
+<section id="ronda">
+  <h2><span class="n">4</span>Cómo es una ronda</h2>
+  <p class="suave">La app muestra arriba del panel en qué etapa están: Fórmula → Debate → Votación → Cartas → ¿Les creés? (y Poder, cuando hay).</p>
+  <ol>
+    <li><b>Fórmula.</b> El <b>Candidato a Jefe de Campaña</b> (el cargo va rotando, siguiendo las flechitas de la mesa) elige a un <b>Vocero</b>.</li>
+    <li><b>Debate con reloj.</b> Habla cada jugador por turno: primero el candidato a Jefe, después el Vocero y luego el resto. Cuando se acaba el tiempo, o tocás "Terminé", pasa la palabra.</li>
+    <li><b>Votación.</b> Todos votan <b>¡Sí!</b> o <b>¡No!</b> y las boletas se abren todas juntas en la urna.
+      <ul>
+        <li><b>Si gana el Sí</b> (más de la mitad): el Jefe recibe 3 cartas de la <b>Mesa de Entradas</b>, manda 1 a <b>La Trituradora</b> y le pasa 2 al Vocero. El Vocero <b>toca la carta que quiere publicar</b> y la otra va a La Trituradora. La Crisis vuelve a cero.</li>
+        <li><b>Si empata o gana el No</b>: el cargo pasa al siguiente y sube la <b>Crisis</b>. Con 3 rechazos seguidos hay <b>¡Cacerolazo!</b>: se publica la carta de arriba del mazo, sin poderes.</li>
+      </ul>
+    </li>
+    <li><b>Declaraciones.</b> El Jefe dice qué 3 cartas le llegaron y el Vocero qué 2 recibió. Se muestran juntas y quedan en el historial. <b>Se vale mentir.</b></li>
+    <li><b>¿Les creés?</b> Si está activado, se abren los micrófonos de todos a la vez para discutir lo que declararon.</li>
+    <li><b>Poder.</b> Si el Escándalo publicado trae un poder, el Jefe lo usa.</li>
+  </ol>
+  <h3>Quién no puede ser Vocero</h3>
+  <p>El último Jefe y el último Vocero electos no pueden ser Vocero en la ronda siguiente. Con 5 jugadores en carrera, solo el último Vocero.</p>
+</section>
+
+<section id="ganar">
+  <h2><span class="n">5</span>Cómo se gana</h2>
+  <table>
+    <tr><th>Bando</th><th>Gana si…</th></tr>
+    <tr><td><b>Campaña</b></td><td>Se publican <b>5 Propuestas</b>, o le hacen un <b>Carpetazo al Topo</b>.</td></tr>
+    <tr><td><b>Operadores + Topo</b></td><td>Se publican <b>6 Escándalos</b>, o <b>El Topo es elegido Vocero</b> después del 3.er Escándalo (la <b>zona roja</b>).</td></tr>
+  </table>
+</section>
+
+<section id="poderes">
+  <h2><span class="n">6</span>Poderes</h2>
+  <p>Algunos Escándalos le dan un poder al Jefe, que <b>está obligado</b> a usarlo. Qué poder toca depende de la cantidad de jugadores; está dibujado en el tablero de El Bochinche.</p>
+  <table>
+    <tr><th>Poder</th><th>Qué hace</th></tr>
+    <tr><td>📊 Encuesta</td><td>El Jefe ve en secreto el <b>bando</b> (no el rol) de alguien. No se puede encuestar dos veces a la misma persona.</td></tr>
+    <tr><td>📂 Mirar la carpeta</td><td>El Jefe espía las próximas 3 cartas del mazo.</td></tr>
+    <tr><td>📣 Bajada de línea</td><td>El Jefe elige al próximo candidato. Después la ronda sigue en el orden normal.</td></tr>
+    <tr><td>🗂️ Carpetazo</td><td>Elimina a un jugador. Si era El Topo, gana la Campaña. Si no, nadie sabe qué era. Los eliminados no votan, no hablan y no pueden ser candidatos.</td></tr>
+    <tr><td>✋ Veto</td><td>Se habilita con 5 Escándalos. El Vocero puede pedir triturar las 2 cartas. Si el Jefe acepta, se tiran y sube la Crisis; si no, el Vocero tiene que publicar.</td></tr>
+  </table>
+</section>
+
+<section id="pantalla">
+  <h2><span class="n">7</span>Cómo leer la pantalla</h2>
+  <ul>
+    <li><b>Marcador (arriba):</b> Propuestas x/5, Escándalos x/6, Crisis x/3 y la ronda. Los Escándalos se ponen en rojo en zona roja.</li>
+    <li><b>Panel de acción:</b> lo que tenés que hacer ahora. Cuando es tu turno, se marca con borde fucsia y el cartel <b>"TE TOCA"</b>.</li>
+    <li><b>La mesa:</b> todos sentados en el orden en que rota el cargo. El cartel <b>JEFE</b> y el cartel <b>VOCERO</b> muestran quién tiene cada rol; "VOS" sos vos; 🤖 marca a los bots; "próximo Jefe" muestra quién sigue.</li>
+    <li><b>Tableros:</b> el afiche de Propuestas y el diario El Bochinche con los Escándalos y sus poderes.</li>
+    <li><b>Abajo:</b> la Crisis, la Mesa de Entradas (cartas que quedan) y La Trituradora (cartas tiradas).</li>
+    <li><b>Último momento:</b> lo que fue pasando en la partida.</li>
+    <li><b>Botones de arriba:</b> 🔊 Sonido · 🪪 Mi rol (para volver a ver tu rol en secreto) · 🗂️ Historial (votos y declaraciones de cada ronda) · ☰ Menú (reglas y código de sala).</li>
+  </ul>
+</section>
+
+<section id="extras">
+  <h2><span class="n">8</span>Micrófono, bots, sonido y personaje</h2>
+  <h3>🎙️ Micrófono</h3>
+  <ul>
+    <li>En el debate por turnos, cuando te toca hablar se abre <b>tu</b> micrófono y todos te escuchan.</li>
+    <li>En el debate abierto ("¿Les creés?") se abren los micrófonos de <b>todos a la vez</b>.</li>
+    <li>La primera vez el navegador pide permiso para usar el micrófono: tocá <b>Permitir</b>.</li>
+    <li>En la portada está <b>"Probar micro"</b> para chequear que funcione antes de jugar.</li>
+    <li>Si están en la misma habitación, usen <b>auriculares</b> o silencien el audio, para evitar acople.</li>
+  </ul>
+  <h3>🤖 Bots</h3>
+  <p>Juegan con estrategia: los de la Campaña desconfían de las fórmulas sospechosas, los Operadores encubren a sus aliados y meten dudas, y El Topo se hace el bueno al principio. Hablan por escrito y en voz alta, con jerga de campaña. La voz se apaga desde 🔊 Sonido.</p>
+  <h3>🔊 Música y sonido</h3>
+  <p>Hay una marcha de campaña en la portada, redoble de suspenso al publicar, urna al votar y efectos para cada momento. Música, efectos, voz de los bots y volumen se manejan por separado en 🔊.</p>
+  <h3>🎨 Mi personaje</h3>
+  <p>Cada uno puede armar su muñequito para la mesa: piel, pelo, color, anteojos, cara, gorro, ropa y fondo. Es neutral: no revela nada del rol.</p>
+</section>
+
+<section id="faq">
+  <h2><span class="n">9</span>Preguntas frecuentes</h2>
+  <h3>Se me cerró el navegador o se cortó internet.</h3>
+  <p>Volvé a abrir el link: entrás directo a la partida.</p>
+  <h3>Cambié de celular.</h3>
+  <p>Entrá con <b>tu mismo mail</b> desde el otro celular y poné el código de la sala: volvés a tu lugar con tu rol.</p>
+  <h3>Me olvidé la contraseña.</h3>
+  <p>En la pantalla de ingreso tocá "Me olvidé la contraseña". Te llega un mail (mirá en spam).</p>
+  <h3>No escucho a nadie / no me escuchan.</h3>
+  <p>Revisá que el navegador tenga permiso de micrófono, tocá "Reintentar" en el panel de audio y probá con wifi. Algunas redes de datos móviles bloquean el audio directo entre celulares: en ese caso se puede sumar un servidor de apoyo (TURN) en <code>docs/config.js</code>.</p>
+  <h3>La partida quedó en pausa.</h3>
+  <p>En el modo gratis, el celular del administrador es el árbitro. Tiene que volver a abrir el juego para que la partida siga.</p>
+  <h3>¿Cuánto cuesta?</h3>
+  <p>Nada. Usa el plan gratis de Firebase y GitHub Pages, sin tarjeta.</p>
+</section>
+
+<section id="dentro">
+  <h2><span class="n">10</span>Cómo funciona por dentro</h2>
+  <table>
+    <tr><th>Pieza</th><th>Qué es</th><th>Dónde vive</th></tr>
+    <tr><td>La página</td><td>Pantallas, botones, tablero, animaciones, sonido y micrófono.</td><td>GitHub Pages (carpeta <code>docs/</code>) y la entrada en Firebase Hosting (<code>web/</code>).</td></tr>
+    <tr><td>El árbitro</td><td>Reparte roles, mezcla el mazo, cuenta votos y aplica las reglas (<code>motor.js</code>). Es el único que sabe todo.</td><td>Modo <b>gratis</b>: el celular del administrador (<code>anfitrion.js</code>). Modo <b>servidor</b>: Firebase Cloud Functions (<code>functions/</code>, plan Blaze).</td></tr>
+    <tr><td>La libreta compartida</td><td>Base de datos en tiempo real donde el árbitro anota lo que cada uno puede ver.</td><td>Firebase Realtime Database.</td></tr>
+    <tr><td>Las cuentas</td><td>Ingreso con mail o Google.</td><td>Firebase Authentication.</td></tr>
+    <tr><td>El audio</td><td>Conexión directa entre celulares (WebRTC); la base de datos solo se usa para presentarlos.</td><td><code>voz.js</code></td></tr>
+  </table>
+  <h3>Seguridad: nadie puede espiar inspeccionando la página</h3>
+  <p>La base de datos tiene tres "cajones" por sala:</p>
+  <ul>
+    <li><b>Público:</b> tablero, votos ya abiertos e historial. Lo ven todos los de la sala.</li>
+    <li><b>Privado de cada jugador:</b> tu rol, tus compañeros, las cartas que tenés en la mano y lo que viste con un poder. <b>Solo lo lee tu celular.</b></li>
+    <li><b>Secreto:</b> el mazo, la trituradora, los roles de todos y los votos sin abrir. Solo lo lee el árbitro.</li>
+  </ul>
+  <p>Ningún jugador escribe directamente en el juego: cada pedido ("voto Sí", "publico esta carta") va al árbitro, que revisa que sea tu turno y que la jugada sea legal. Las reglas de la base (<code>database.rules*.json</code>) hacen cumplir los cajones.</p>
+  <div class="caja ojo"><b>Detalle honesto del modo gratis:</b> como el árbitro corre en el celular del administrador, ese celular tiene el cajón secreto. Un administrador que sepa programar podría espiarlo. Para seguridad total entre desconocidos está el modo <b>servidor</b> (plan Blaze, ver <code>COMO_PUBLICAR.md</code>, camino B).</div>
+</section>
+
+<section id="archivos">
+  <h2><span class="n">11</span>Qué hay en cada archivo</h2>
+  <table>
+    <tr><th>Archivo</th><th>Qué tiene</th></tr>
+    <tr><td><code>GUIA.html</code></td><td>Esta guía.</td></tr>
+    <tr><td><code>COMO_PUBLICAR.md</code></td><td>Paso a paso para publicar el juego desde cero (Firebase + GitHub Pages).</td></tr>
+    <tr><td><code>docs/index.html</code></td><td>La página que se abre en el celular.</td></tr>
+    <tr><td><code>docs/config.js</code></td><td><b>El único archivo de configuración:</b> los datos de tu proyecto de Firebase y el modo (gratis o servidor).</td></tr>
+    <tr><td><code>docs/app.js</code></td><td>Todas las pantallas y botones.</td></tr>
+    <tr><td><code>docs/textos.js</code></td><td>Reglas, roles, textos de las Propuestas y titulares de los Escándalos. <b>Se puede editar a gusto.</b></td></tr>
+    <tr><td><code>docs/motor.js</code></td><td>El reglamento: es copia exacta de <code>functions/engine.js</code>.</td></tr>
+    <tr><td><code>docs/anfitrion.js</code></td><td>El árbitro del modo gratis (corre en el celular del administrador).</td></tr>
+    <tr><td><code>docs/bots.js</code></td><td>El cerebro de los bots y sus frases.</td></tr>
+    <tr><td><code>docs/practica.js</code></td><td>El modo práctica contra bots.</td></tr>
+    <tr><td><code>docs/voz.js</code></td><td>Micrófono y audio entre celulares.</td></tr>
+    <tr><td><code>docs/habla.js</code></td><td>La voz de los bots.</td></tr>
+    <tr><td><code>docs/sonido.js</code></td><td>Música y efectos (todo generado por código).</td></tr>
+    <tr><td><code>docs/arte.js</code></td><td>Todos los dibujos: logo, personajes, tableros, cartas.</td></tr>
+    <tr><td><code>docs/estilos.css</code></td><td>Colores, tamaños y diseño para celular, tablet y PC.</td></tr>
+    <tr><td><code>functions/</code></td><td>El árbitro para el modo servidor y las pruebas automáticas del reglamento.</td></tr>
+    <tr><td><code>database.rules.gratis.json</code></td><td>Reglas de seguridad de la base para el modo gratis (las que están puestas en Firebase).</td></tr>
+    <tr><td><code>database.rules.json</code></td><td>Reglas de seguridad para el modo servidor.</td></tr>
+    <tr><td><code>web/</code> y <code>publicar-dominio.sh</code></td><td>La dirección ballotage-juego.web.app.</td></tr>
+    <tr><td><code>instalar.sh</code></td><td>Instalador automático del modo servidor (Cloud Shell).</td></tr>
+  </table>
+</section>
+
+<section id="cambiar">
+  <h2><span class="n">12</span>Cambiar cosas y volver a publicar</h2>
+  <h3>Cambiar textos de cartas o reglas</h3>
+  <ol>
+    <li>En GitHub, abrí <code>docs/textos.js</code> y tocá el lápiz (Edit).</li>
+    <li>Cambiá las frases entre comillas. Ojo: cada frase va entre <code>'comillas'</code> y termina con coma.</li>
+    <li>Tocá <b>Commit changes</b>. En 1 o 2 minutos se actualiza el juego.</li>
+  </ol>
+  <h3>Probarlo en tu computadora</h3>
+  <p>Hacer doble clic en <code>docs/index.html</code> <b>no funciona</b>: el navegador bloquea los módulos. Hace falta un servidor local. Por ejemplo, con Python instalado, abrí una terminal en la carpeta <code>docs</code> y escribí:</p>
+  <p><code>python -m http.server 8080</code></p>
+  <p>Después entrá a <code>http://localhost:8080/?practica</code> para jugar contra bots.</p>
+  <h3>Publicarlo desde cero en otra cuenta</h3>
+  <p>Seguí <code>COMO_PUBLICAR.md</code>, camino A (gratis, unos 15 minutos): crear el proyecto en Firebase, activar el ingreso con mail, pegar las reglas de <code>database.rules.gratis.json</code>, copiar los datos de la app a <code>docs/config.js</code> y activar GitHub Pages en la carpeta <code>/docs</code>.</p>
+  <h3>Correr las pruebas del reglamento</h3>
+  <p>Con Node.js instalado: <code>cd functions</code>, <code>npm install</code>, <code>npm test</code>.</p>
+</section>
+
+</main>
+<footer>BALLOTAGE · Todo es inventado: no hay políticos, partidos ni eslóganes reales.</footer>
+</body>
+</html>
