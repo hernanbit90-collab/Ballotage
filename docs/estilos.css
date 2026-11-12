@@ -1339,3 +1339,4 @@ html[data-movimiento="no"] *, html[data-movimiento="no"] *::before, html[data-mo
 }
 .opcion-inicio.volver-sala { border-color: rgba(34, 211, 182, .55); background: rgba(34, 211, 182, .1); }
 .opcion-inicio.volver-sala .ico { background: rgba(34, 211, 182, .18); }
+.video-reglas { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: 14px; background: #0d0a22; margin: 6px 0 8px; }

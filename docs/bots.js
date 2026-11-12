@@ -11,7 +11,7 @@
 //   d = { decir: { pid, text }, demora } -> el bot habla en el debate
 //   d = null                          -> le toca a un humano
 
-import './motor.js?v=202611120248';
+import './motor.js?v=202611121235';
 
 const E = globalThis.BallotageEngine;
 const L = (x) => E.lista(x);

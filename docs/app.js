@@ -1,14 +1,14 @@
 // BALLOTAGE — lo que corre en cada celular.
 // Solo muestra lo que el árbitro le deja ver y le manda pedidos.
 
-import * as CFG from './config.js?v=202611120248';
-import * as T from './textos.js?v=202611120248';
-import * as A from './arte.js?v=202611120248';
-import * as Practica from './practica.js?v=202611120248';
-import * as Anfitrion from './anfitrion.js?v=202611120248';
-import * as Voz from './voz.js?v=202611120248';
-import * as Son from './sonido.js?v=202611120248';
-import * as Habla from './habla.js?v=202611120248';
+import * as CFG from './config.js?v=202611121235';
+import * as T from './textos.js?v=202611121235';
+import * as A from './arte.js?v=202611121235';
+import * as Practica from './practica.js?v=202611121235';
+import * as Anfitrion from './anfitrion.js?v=202611121235';
+import * as Voz from './voz.js?v=202611121235';
+import * as Son from './sonido.js?v=202611121235';
+import * as Habla from './habla.js?v=202611121235';
 
 const { firebaseConfig, REGION } = CFG;
 
@@ -50,6 +50,16 @@ if (!PRACTICA) {
     llamar = fu.httpsCallable(fns, 'ballotage');
   }
 }
+
+// Video de "Cómo se juega" (está junto a este archivo, también cuando la
+// página se abre desde ballotage-juego.web.app).
+const VIDEO_REGLAS = new URL('como-jugar.mp4', import.meta.url).href;
+// Mientras suena el video, la música del juego se calla.
+let videoSonando = false;
+const esVideoReglas = (ev) => ev.target && ev.target.classList && ev.target.classList.contains('video-reglas');
+document.addEventListener('play', (ev) => { if (esVideoReglas(ev)) { videoSonando = true; Son.musica(null); } }, true);
+for (const e of ['pause', 'ended']) document.addEventListener(e, (ev) => { if (esVideoReglas(ev)) videoSonando = false; }, true);
+const musicaInicio = () => { if (!videoSonando) Son.musica('inicio'); };
 
 // ------------------------------------------------------------------ Estado local
 
@@ -143,7 +153,7 @@ async function revisarSalaGuardada(code) {
     // Anfitrión de una sala de espera: su celular sigue de árbitro en segundo
     // plano (así otros pueden entrar) aunque él se quede en el menú.
     if (pub.status === 'lobby' && pub.host === pid && GRATIS) Anfitrion.asegurarArbitro(code).catch(() => {});
-    if (pub.status === 'lobby' || pub.status === 'playing') {
+    if (pub.status === 'lobby' || pub.status === 'playing' || pub.status === 'ended') {
       st.salaPendiente = { code, estado: pub.status === 'lobby' ? 'Sala de espera' : 'La partida terminó: mirá el resultado o pedí revancha' };
       if (!st.code && (st.pantallaInicio || 'menu') === 'menu') pantallaInicio();
       return;
@@ -211,7 +221,7 @@ function portada() {
 }
 
 function pantallaPractica() {
-  Son.musica('inicio');
+  musicaInicio();
   setTimeout(botonSonido, 0);
   $app.className = 'inicio';
   $app.innerHTML = `
@@ -258,7 +268,7 @@ const ERRORES_AUTH = {
 const errorAuth = (e) => ERRORES_AUTH[e && e.code] || 'No se pudo entrar. Probá de nuevo.';
 
 function pantallaLogin(modo = 'entrar') {
-  Son.musica('inicio');
+  musicaInicio();
   setTimeout(botonSonido, 0);
   $app.className = 'inicio';
   const crear = modo === 'crear';
@@ -337,7 +347,7 @@ async function entrarConGoogle() {
 //   armar    -> apodo + Crear sala
 //   ingresar -> apodo + código + Entrar
 function pantallaInicio() {
-  Son.musica('inicio');
+  musicaInicio();
   setTimeout(botonSonido, 0);
   if (PRACTICA) return pantallaPractica();
   const yo = auth.currentUser;
@@ -518,7 +528,7 @@ function invitacion(link) {
 }
 
 function pantallaEspera() {
-  Son.musica('inicio');
+  musicaInicio();
   setTimeout(botonSonido, 0);
   const p = st.pub;
   const guardadoLook = miLookGuardado();
@@ -1246,6 +1256,9 @@ function dibujarModal() {
     document.body.appendChild(m);
   }
   m.className = 'modal-fondo';
+  // Las reglas no cambian: si ya están abiertas no se redibujan (así el video no se corta).
+  if (st.modal === 'reglas' && m.dataset.tipo === 'reglas') return;
+  m.dataset.tipo = st.modal;
   m.innerHTML = `<div class="modal">${contenidoModal()}<button class="btn link cerrar" data-act="cerrarModal">Cerrar</button></div>`;
 }
 
@@ -1324,7 +1337,13 @@ function contenidoModal() {
         <p class="nota">Consejo: si juegan en la misma habitación, usen auriculares o bajen el volumen para que no se acople.</p>`;
     }
     case 'reglas':
-      return `<div class="reglas">${A.logoChico()}${T.REGLAS}</div>`;
+      return `<div class="reglas">${A.logoChico()}
+        <h2>🎬 Mirá el video (4 minutos)</h2>
+        <video class="video-reglas" controls playsinline preload="none" poster="${VIDEO_REGLAS.replace('.mp4', '.jpg')}" src="${VIDEO_REGLAS}">
+          Tu navegador no puede mostrar el video. Abajo están las reglas escritas.
+        </video>
+        <p class="nota">Explica todo el juego paso a paso. Abajo están las mismas reglas por escrito.</p>
+        ${T.REGLAS}</div>`;
     case 'rol':
       return modalRol();
     case 'historial':
@@ -1634,6 +1653,7 @@ document.addEventListener('click', async (ev) => {
       break;
     case 'cerrarModal':
       if (st.pararPrueba) { st.pararPrueba(); st.pararPrueba = null; }
+      videoSonando = false;
       st.modal = st.volverA && st.modal !== st.volverA ? st.volverA : null;
       st.volverA = null;
       st.verRol = false;
