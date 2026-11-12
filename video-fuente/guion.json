@@ -1,0 +1,38 @@
+[
+ {"sec":"", "tit":"Cómo se juega", "vis":"logo", "txt":"Bienvenidos a Ballotage, un juego de roles secretos para cinco a diez jugadores. Cada uno juega desde su celular."},
+ {"sec":"La historia", "tit":"Hay infiltrados en la campaña", "vis":"logo", "txt":"Hay elecciones en la República de Ballotagia. Todos trabajan en el búnker de campaña, pero entre ustedes hay infiltrados del rival."},
+
+ {"sec":"Los roles", "tit":"Equipo de Campaña", "vis":"roles:0", "txt":"Hay tres roles. El Equipo de Campaña es mayoría y quiere ganar limpio, publicando Propuestas."},
+ {"sec":"Los roles", "tit":"Operadores del Rival", "vis":"roles:1", "txt":"Los Operadores del Rival quieren hundir la campaña, llenando la tapa de Escándalos. Ellos saben quiénes son sus compañeros."},
+ {"sec":"Los roles", "tit":"El Topo", "vis":"roles:2", "txt":"El Topo es el líder secreto de los Operadores. Con cinco o seis jugadores, conoce a sus Operadores. Con siete o más, no sabe quiénes son."},
+
+ {"sec":"Para empezar", "tit":"Armar partida o ingresar con código", "vis":"shot:menu", "pts":["Uno toca «Armar partida»","Comparte el código de 4 letras","Los demás: «Ingresar con código»"], "txt":"Para empezar, una persona toca Armar partida y comparte el código de cuatro letras. Los demás tocan Ingresar con código."},
+ {"sec":"Para empezar", "tit":"La sala de espera", "vis":"shot:sala", "pts":["El anfitrión elige los tiempos","Puede sumar bots si faltan jugadores","Y larga la campaña"], "txt":"En la sala de espera, el anfitrión elige los tiempos, puede sumar bots si faltan jugadores, y larga la campaña."},
+ {"sec":"Para empezar", "tit":"Tu rol es secreto", "vis":"shot:rol", "pts":["Cada jugador ve solo su rol","Se puede volver a mirar con «Mi rol»"], "txt":"Cada jugador recibe su rol en secreto. Nadie más puede verlo."},
+
+ {"sec":"La ronda", "tit":"Cada ronda tiene cinco pasos", "vis":"pasos:-1", "txt":"Cada ronda tiene cinco pasos: fórmula, debate, votación, cartas y declaraciones."},
+ {"sec":"Paso 1 · Fórmula", "tit":"El Jefe elige a su Vocero", "vis":"shot:nominar", "pts":["El cargo de Jefe rota por la mesa","El candidato a Jefe elige un Vocero"], "paso":0, "txt":"Paso uno: la fórmula. El Candidato a Jefe de Campaña, un cargo que va rotando por la mesa, elige a un Vocero."},
+ {"sec":"Paso 2 · Debate", "tit":"Todos hablan, por turno", "vis":"shot:debate", "pts":["Cada uno habla con reloj","En tu turno se abre tu micrófono","Todos te escuchan"], "paso":1, "txt":"Paso dos: el debate. Cada jugador habla por turno, con reloj. Cuando llega tu turno, se abre tu micrófono y todos te escuchan."},
+ {"sec":"Paso 3 · Votación", "tit":"¿Sí o No a la fórmula?", "vis":"shot:voto", "pts":["Todos votan Sí o No","Las boletas se abren juntas","Sin voto a tiempo = Sí"], "paso":2, "txt":"Paso tres: la votación. Todos votan Sí o No a la fórmula. Las boletas se abren todas juntas. Quien no vota a tiempo, cuenta como Sí."},
+ {"sec":"Paso 3 · Votación", "tit":"Si gana el No, sube la Crisis", "vis":"crisis", "paso":2, "txt":"Si gana el No, o hay empate, el cargo pasa al siguiente jugador y sube la Crisis. Con tres rechazos seguidos hay Cacerolazo: se publica la primera carta del mazo, sin poderes."},
+ {"sec":"Paso 4 · Cartas", "tit":"El Jefe recibe tres cartas", "vis":"shot:jefe", "pts":["El Jefe ve 3 cartas en secreto","Descarta 1","Le pasa 2 al Vocero"], "paso":3, "txt":"Paso cuatro: las cartas. Si gana el Sí, el Jefe recibe tres cartas en secreto, descarta una, y le pasa dos al Vocero."},
+ {"sec":"Paso 4 · Cartas", "tit":"El Vocero publica una", "vis":"shot:vocero", "pts":["Toca la carta que quiere publicar","La otra va a la trituradora","Las descartadas nunca se muestran"], "paso":3, "txt":"El Vocero toca la carta que quiere publicar. La otra va a la trituradora. Las cartas descartadas nunca se muestran."},
+ {"sec":"Paso 4 · Cartas", "tit":"El mazo: 6 Propuestas y 11 Escándalos", "vis":"mazo", "paso":3, "txt":"El mazo tiene diecisiete cartas: seis Propuestas y once Escándalos. Por eso, a veces, publicar un Escándalo es inevitable."},
+ {"sec":"Paso 5 · Declaraciones", "tit":"¿Qué cartas vieron?", "vis":"shot:declarar", "pts":["El Jefe cuenta sus 3 cartas","El Vocero cuenta sus 2","Pueden mentir"], "paso":4, "txt":"Paso cinco: las declaraciones. El Jefe y el Vocero cuentan qué cartas vieron. Pueden decir la verdad, o mentir."},
+ {"sec":"Paso 5 · Declaraciones", "tit":"Debate abierto: ¿les creen?", "vis":"shot:charla", "pts":["Se abren todos los micrófonos","Todos discuten a la vez"], "paso":4, "txt":"Después se abren los micrófonos de todos, para discutir. ¿Les creen?"},
+
+ {"sec":"Los poderes", "tit":"Algunos Escándalos dan un poder", "vis":"poderes:-1", "txt":"Algunos Escándalos le dan un poder al Jefe, que está obligado a usarlo."},
+ {"sec":"Los poderes", "tit":"Encuesta y Mirar la carpeta", "vis":"poderes:0", "txt":"Encuesta: ver en secreto el bando de un jugador. Mirar la carpeta: espiar las próximas tres cartas."},
+ {"sec":"Los poderes", "tit":"Bajada de línea y Carpetazo", "vis":"poderes:1", "txt":"Bajada de línea: elegir al próximo candidato. Y Carpetazo: eliminar a un jugador de la partida."},
+ {"sec":"Los poderes", "tit":"El Veto", "vis":"poderes:2", "txt":"Con cinco Escándalos se habilita el Veto. El Vocero puede pedir tirar las dos cartas, si el Jefe acepta."},
+ {"sec":"Una regla importante", "tit":"Quién no puede ser Vocero", "vis":"limite", "txt":"Atención: el último Jefe y el último Vocero elegidos, no pueden ser Vocero en la ronda siguiente."},
+
+ {"sec":"Cómo se gana", "tit":"Gana la Campaña", "vis":"ganar:0", "txt":"¿Cómo se gana? La Campaña gana si se publican cinco Propuestas, o si le hace un Carpetazo al Topo."},
+ {"sec":"Cómo se gana", "tit":"Ganan los Operadores", "vis":"ganar:1", "txt":"Los Operadores ganan si se publican seis Escándalos, o si El Topo es elegido Vocero después del tercer Escándalo. Esa es la zona roja."},
+
+ {"sec":"La pantalla", "tit":"El marcador y «Te toca»", "vis":"shot:voto", "pts":["Arriba: Propuestas, Escándalos y Crisis","El panel se ilumina cuando es tu turno","Abajo: la mesa con todos los jugadores"], "txt":"En la pantalla, el marcador de arriba muestra Propuestas, Escándalos y Crisis. Cuando es tu turno, el panel se ilumina con el cartel: Te toca."},
+ {"sec":"La pantalla", "tit":"La ruedita de configuración", "vis":"shot:config", "pts":["Armar tu personaje","Probar el micrófono","Música, fondo y tamaño de letra"], "txt":"En la ruedita de configuración se puede armar el personaje, probar el micrófono, y ajustar la música y el fondo."},
+
+ {"sec":"Consejos", "tit":"Hablen, pregunten, sospechen", "vis":"consejos", "txt":"Consejos finales: hablen mucho, pidan explicaciones, y miren cómo vota cada uno en el historial. Los votos dicen mucho."},
+ {"sec":"", "tit":"¡Que gane la mejor campaña!", "vis":"logo", "txt":"Y recuerden: mentir está permitido. ¡Que gane la mejor campaña!"}
+]

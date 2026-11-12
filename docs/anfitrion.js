@@ -6,8 +6,8 @@
 // "buzón" y les contesta. Los otros jugadores siguen viendo solo lo suyo.
 // Mientras el anfitrión tenga el juego cerrado, la partida queda en pausa.
 
-import './motor.js?v=202611120248';
-import * as Bots from './bots.js?v=202611120248';
+import './motor.js?v=202611121235';
+import * as Bots from './bots.js?v=202611121235';
 
 const E = globalThis.BallotageEngine;
 const LETRAS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // sin I ni O para no confundir

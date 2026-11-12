@@ -124,8 +124,26 @@ async function sala(n, stats) {
     const secreto = await DB.get(DB.ref(j.db, 'rooms/' + code + '/hostsec')).then(() => 'leyo').catch(() => 'bloqueado');
     if (intento === 'leyo' || secreto === 'leyo') espiaron++;
   }
+  // Revancha: el anfitrión vuelve a la sala de espera con los mismos jugadores y se juega otra partida.
+  let revancha = null;
+  if (process.env.REVANCHA) {
+    await host.A.pedir({ op: 'act', code, action: { type: 'rematch' } }, host.email);
+    for (let i = 0; i < 50 && !js.every((j) => j.pub && j.pub.status === 'lobby'); i++) await dormir(200);
+    const enLobby = js.every((j) => j.pub && j.pub.status === 'lobby' && Object.keys(j.pub.players).length === js.length);
+    await host.A.pedir({ op: 'act', code, action: { type: 'settings', debate: 0, voteTime: 0, declare: true, charla: 0, voice: false } }, host.email);
+    await host.A.pedir({ op: 'act', code, action: { type: 'start' } }, host.email);
+    const lim2 = Date.now() + 240000;
+    while (Date.now() < lim2) {
+      const g2 = host.pub && host.pub.game;
+      if (g2 && g2.phase === 'ended' && host.pub.status === 'ended') break;
+      for (const j of js) actuar(j, code, stats);
+      await dormir(400);
+    }
+    for (let i = 0; i < 50 && !js.every((j) => j.pub && j.pub.status === 'ended'); i++) await dormir(200);
+    revancha = enLobby && js.every((j) => j.pub && j.pub.status === 'ended');
+  }
   for (const j of js) j.A.detener();
-  return { n, code, fin: g && g.phase === 'ended', ganador: g && g.winner, rondas: g && g.round, seg: Math.round((Date.now() - t0) / 1000), nombresOk, todosVenFinal, espiaron };
+  return { revancha, n, code, fin: g && g.phase === 'ended', ganador: g && g.winner, rondas: g && g.round, seg: Math.round((Date.now() - t0) / 1000), nombresOk, todosVenFinal, espiaron };
 }
 
 const stats = { jugadas: 0, rechazadas: 0, sinRespuesta: 0 };
@@ -142,6 +160,7 @@ console.log(JSON.stringify({
   sin_terminar: res.filter((r) => !r.error && !r.fin).length,
   codigos_unicos: codigos.size,
   mezcla_de_salas: res.filter((r) => r.nombresOk === false).length,
+  revancha_ok: process.env.REVANCHA ? res.filter((r) => r.revancha).length : 'no probada',
   vieron_final_distinto: res.filter((r) => r.todosVenFinal === false).length,
   intentos_de_espiar_que_funcionaron: res.reduce((a, r) => a + (r.espiaron || 0), 0),
   ganadores: res.reduce((a, r) => { if (r.ganador) a[r.ganador] = (a[r.ganador] || 0) + 1; return a; }, {}),
