@@ -1,8 +1,8 @@
 // Modo práctica: vos contra bots, todo dentro del navegador.
 // Usa el mismo reglamento que el árbitro (motor.js) y el cerebro de bots.js.
 
-import './motor.js?v=202611120233';
-import * as Bots from './bots.js?v=202611120233';
+import './motor.js?v=202611120248';
+import * as Bots from './bots.js?v=202611120248';
 
 const E = globalThis.BallotageEngine;
 const rnd = (n) => Math.floor(Math.random() * n);

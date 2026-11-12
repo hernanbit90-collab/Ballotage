@@ -6,8 +6,8 @@
 // "buzón" y les contesta. Los otros jugadores siguen viendo solo lo suyo.
 // Mientras el anfitrión tenga el juego cerrado, la partida queda en pausa.
 
-import './motor.js?v=202611120233';
-import * as Bots from './bots.js?v=202611120233';
+import './motor.js?v=202611120248';
+import * as Bots from './bots.js?v=202611120248';
 
 const E = globalThis.BallotageEngine;
 const LETRAS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // sin I ni O para no confundir
@@ -239,10 +239,14 @@ function porBuzon(code, pedido) {
       fb.remove(ref(rutaResp)).catch(() => {});
       resolver(r);
     }, () => {});
-    fb.set(item, clonar(Object.assign({}, pedido, { t: Date.now() }))).catch((e) => {
+    // Recién conectado, la base a veces todavía no recibió la sesión del
+    // jugador y rechaza el primer envío: se reintenta un par de veces.
+    const enviar = (intento) => fb.set(item, clonar(Object.assign({}, pedido, { t: Date.now() }))).catch((e) => {
+      if (intento < 3 && /permission/i.test(e.message)) { setTimeout(() => enviar(intento + 1), 600 * (intento + 1)); return; }
       clearTimeout(reloj);
       if (off) off();
       rechazar(new Error('No pude mandar el pedido: ' + e.message));
     });
+    enviar(0);
   });
 }
