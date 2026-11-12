@@ -1301,3 +1301,39 @@ html[data-movimiento="no"] *, html[data-movimiento="no"] *::before, html[data-mo
   animation-iteration-count: 1 !important;
   transition-duration: .001s !important;
 }
+
+/* ================================================================
+   Menú principal: Armar partida / Ingresar con código / Practicar
+   ================================================================ */
+.menu-inicio { display: flex; flex-direction: column; gap: 12px; margin: var(--e4) 0 var(--e2); }
+.opcion-inicio {
+  display: flex; align-items: center; gap: 14px; width: 100%;
+  min-height: 76px; padding: 14px 16px; text-align: left; text-decoration: none;
+  font: inherit; color: #f4f1ff; cursor: pointer;
+  background: var(--noche-2); border: 1px solid rgba(255, 255, 255, .1); border-radius: 18px;
+  transition: transform var(--rapido), border-color var(--rapido), background var(--rapido);
+  -webkit-tap-highlight-color: transparent;
+}
+.opcion-inicio:active { transform: scale(.98); }
+@media (hover: hover) { .opcion-inicio:hover { border-color: rgba(255, 210, 63, .5); background: #1c1747; } }
+.opcion-inicio .ico { flex: none; width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; font-size: 1.5rem; background: rgba(255, 255, 255, .06); }
+.opcion-inicio .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.opcion-inicio b { font-family: var(--fuente-titulo); font-size: 1.15rem; font-weight: 700; }
+.opcion-inicio small { color: var(--texto-2); font-size: var(--t-s); opacity: 1; }
+.opcion-inicio .flecha { flex: none; font-size: 1.8rem; line-height: 1; color: var(--texto-2); }
+.opcion-inicio.principal { background: var(--amarillo); color: var(--noche); border-color: transparent; box-shadow: 0 12px 30px rgba(255, 210, 63, .28); }
+.opcion-inicio.principal small, .opcion-inicio.principal .flecha { color: rgba(13, 10, 34, .7); }
+.opcion-inicio.principal .ico { background: rgba(13, 10, 34, .1); }
+
+.paso-inicio h2 { margin: 4px 0 6px; font-size: 1.4rem; }
+.paso-inicio .campo { margin: var(--e3) 0; }
+.btn.link.volver { display: inline-flex; margin: 0 0 4px; padding: 0; min-height: 36px; color: var(--texto-2); }
+.inicio > .btn.link.volver { margin-top: var(--e2); }
+.tarjeta.con-codigo b { display: block; margin-bottom: 4px; }
+.tarjeta.con-codigo a { color: var(--amarillo); font-weight: 700; }
+/* En las pantallas de "Armar" e "Ingresar" el formulario sube: menos portada en el celular */
+@media (max-width: 999px) {
+  .inicio.paso .rasgos { display: none; }
+  .inicio.paso .logo-arte svg { width: min(180px, 52%); }
+  .inicio.paso .bajada { margin-bottom: var(--e2); }
+}
