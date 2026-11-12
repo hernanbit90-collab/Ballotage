@@ -1,14 +1,14 @@
 // BALLOTAGE — lo que corre en cada celular.
 // Solo muestra lo que el árbitro le deja ver y le manda pedidos.
 
-import * as CFG from './config.js?v=202611120233';
-import * as T from './textos.js?v=202611120233';
-import * as A from './arte.js?v=202611120233';
-import * as Practica from './practica.js?v=202611120233';
-import * as Anfitrion from './anfitrion.js?v=202611120233';
-import * as Voz from './voz.js?v=202611120233';
-import * as Son from './sonido.js?v=202611120233';
-import * as Habla from './habla.js?v=202611120233';
+import * as CFG from './config.js?v=202611120248';
+import * as T from './textos.js?v=202611120248';
+import * as A from './arte.js?v=202611120248';
+import * as Practica from './practica.js?v=202611120248';
+import * as Anfitrion from './anfitrion.js?v=202611120248';
+import * as Voz from './voz.js?v=202611120248';
+import * as Son from './sonido.js?v=202611120248';
+import * as Habla from './habla.js?v=202611120248';
 
 const { firebaseConfig, REGION } = CFG;
 
@@ -138,8 +138,11 @@ async function revisarSalaGuardada(code) {
     if (!pid) { guardado.set('code', null); return; }
     const pub = (await fb.get(fb.ref(db, base + 'pub'))).val() || {};
     const fase = pub.game && pub.game.phase;
-    // En juego, o sos el anfitrión de una sala de espera (tu celular hace de árbitro): volvés directo.
-    if ((pub.status === 'playing' && fase !== 'ended') || (pub.status === 'lobby' && pub.host === pid)) { entrarASala(code); return; }
+    // Solo con la partida en juego (se cortó o recargaste) se vuelve directo.
+    if (pub.status === 'playing' && fase !== 'ended') { entrarASala(code); return; }
+    // Anfitrión de una sala de espera: su celular sigue de árbitro en segundo
+    // plano (así otros pueden entrar) aunque él se quede en el menú.
+    if (pub.status === 'lobby' && pub.host === pid && GRATIS) Anfitrion.asegurarArbitro(code).catch(() => {});
     if (pub.status === 'lobby' || pub.status === 'playing') {
       st.salaPendiente = { code, estado: pub.status === 'lobby' ? 'Sala de espera' : 'La partida terminó: mirá el resultado o pedí revancha' };
       if (!st.code && (st.pantallaInicio || 'menu') === 'menu') pantallaInicio();
