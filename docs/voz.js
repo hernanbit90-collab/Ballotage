@@ -38,6 +38,27 @@ let medidor = null;
 
 const id = () => Math.random().toString(36).slice(2, 10);
 
+// Micrófono elegido en Configuración (si hay más de uno). Vacío = el del sistema.
+let microElegido = '';
+try { microElegido = localStorage.getItem('ballotage.micro') || ''; } catch { /* sin almacenamiento */ }
+const pedirAudio = (extra) => {
+  const audio = Object.assign({ echoCancellation: true, noiseSuppression: true }, extra || {});
+  if (microElegido) audio.deviceId = { ideal: microElegido };
+  return navigator.mediaDevices.getUserMedia({ audio });
+};
+export function elegirMicrofono(deviceId) {
+  microElegido = deviceId || '';
+  try { localStorage.setItem('ballotage.micro', microElegido); } catch { /* sin almacenamiento */ }
+}
+export const microfonoElegido = () => microElegido;
+// Lista de micrófonos. Los nombres solo aparecen después de dar permiso una vez.
+export async function listarMicrofonos() {
+  try {
+    const todos = await navigator.mediaDevices.enumerateDevices();
+    return todos.filter((d) => d.kind === 'audioinput').map((d, i) => ({ id: d.deviceId, nombre: d.label || 'Micrófono ' + (i + 1) }));
+  } catch { return []; }
+}
+
 // ------------------------------------------------------------------ Sonido y pantalla
 
 let ctx = null;
@@ -216,7 +237,7 @@ function pararMedidor() {
 
 // Prueba del micrófono antes de jugar: mide unos segundos y lo apaga.
 export async function probarMicrofono(alCambiar) {
-  const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+  const s = await pedirAudio();
   const c = contextoAudio();
   if (c && c.state === 'suspended') await c.resume().catch(() => {});
   let raf = null;
@@ -263,9 +284,7 @@ async function hablar(clave) {
   estadoMicro = 'pidiendo-micro';
   avisar();
   try {
-    micro = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    });
+    micro = await pedirAudio({ autoGainControl: true });
   } catch {
     estadoMicro = 'sin-micro';
     avisar();
@@ -417,7 +436,7 @@ export async function microPractica(prender, alCambiar) {
   const yo = practica;
   if (alCambiar) alCambiar();
   try {
-    const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    const s = await pedirAudio();
     if (practica !== yo) { s.getTracks().forEach((t) => t.stop()); return; }
     yo.stream = s;
     yo.estado = 'al-aire';
