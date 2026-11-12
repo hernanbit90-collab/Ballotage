@@ -120,7 +120,7 @@ function salirDeSala(msg) {
   if (!PRACTICA) { Voz.cortar(); Voz.sala(null, null); }
   st.cancelar.forEach((f) => f());
   st.cancelar = [];
-  Object.assign(st, { code: null, pid: null, pub: null, priv: null, presence: {}, modal: null, rolVisto: false, verRol: false,
+  Object.assign(st, { code: null, pid: null, pub: null, priv: null, presence: {}, modal: null, rolVisto: false, verRol: false, pantallaInicio: 'menu',
     ultimoVoto: null, ultimaCuenta: null, ultimaEncuesta: null, ultimoEvento: null });
   guardado.set('code', null);
   try { history.replaceState(null, '', location.pathname + (EMU ? '?emu' : params.has('practica') ? '?practica' : '')); } catch { /* sin historial */ }
@@ -189,7 +189,9 @@ function pantallaPractica() {
   $app.className = 'inicio';
   $app.innerHTML = `
     ${portada()}
-    <div class="aviso practica">🤖 <b>Modo práctica</b>: jugás vos contra bots, en este celular. ${configurado ? '' : 'Para jugar online con amigos hay que configurar Firebase (ver COMO_PUBLICAR.md).'}</div>
+    ${configurado ? `<a class="btn link volver" href="${location.pathname}">← Volver al menú</a>` : ''}
+    <div class="aviso practica">🤖 <b>Modo práctica</b>: jugás vos contra bots, en este celular.</div>
+    ${configurado ? '' : `<div class="tarjeta con-codigo"><b>🔑 ¿Tenés un código de sala?</b><p class="nota izq">Las partidas con amigos (armar sala o entrar con código) se juegan en <a href="https://ballotage-juego.web.app" target="_blank" rel="noopener">ballotage-juego.web.app</a>.</p></div>`}
     <label class="campo">Tu apodo
       <input id="apodo" maxlength="16" autocomplete="nickname" placeholder="Ej: La Tana" value="${esc(guardado.get('name') || '')}">
     </label>
@@ -206,7 +208,6 @@ function pantallaPractica() {
     <button class="btn grande primario" data-act="practicar">¡Largar la campaña!</button>
     <div class="links">
       <button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button>
-      ${configurado ? `<a class="btn link" href="${location.pathname}">🌐 Jugar online con amigos</a>` : ''}
     </div>
   `;
 }
@@ -304,37 +305,69 @@ async function entrarConGoogle() {
   }
 }
 
+// Menú principal: primero se elige qué hacer y después se abre la pantalla de eso.
+//   menu     -> Armar partida / Ingresar con código / Practicar contra bots
+//   armar    -> apodo + Crear sala
+//   ingresar -> apodo + código + Entrar
 function pantallaInicio() {
   Son.musica('inicio');
   setTimeout(botonSonido, 0);
   if (PRACTICA) return pantallaPractica();
   const yo = auth.currentUser;
   const codigo = (params.get('sala') || '').toUpperCase();
-  $app.className = 'inicio';
+  if (codigo && !st.pantallaInicio) st.pantallaInicio = 'ingresar'; // vino con link de invitación
+  const pantalla = st.pantallaInicio || 'menu';
+  const campoApodo = `<label class="campo">Tu apodo
+      <input id="apodo" maxlength="16" autocomplete="nickname" placeholder="Ej: La Tana" value="${esc(guardado.get('name') || (yo && yo.displayName) || '')}">
+    </label>`;
+  const volver = '<button class="btn link volver" data-act="irInicio" data-p="menu">← Volver al menú</button>';
+  $app.className = pantalla === 'menu' ? 'inicio' : 'inicio paso';
+  let cuerpo;
+  if (pantalla === 'armar') {
+    cuerpo = `<div class="tarjeta paso-inicio">
+      ${volver}
+      <h2>🗳️ Armar partida</h2>
+      <p class="nota izq">Creás la sala, te damos un código de 4 letras y se lo pasás a tus amigos (por WhatsApp o como quieras). Vos sos el anfitrión: elegís los tiempos y largás la campaña.</p>
+      ${campoApodo}
+      <button class="btn grande primario" data-act="crear">Crear sala</button>
+    </div>`;
+  } else if (pantalla === 'ingresar') {
+    cuerpo = `<div class="tarjeta paso-inicio">
+      ${volver}
+      <h2>🔑 Ingresar a una partida</h2>
+      <p class="nota izq">Pedile el código de 4 letras a quien armó la sala.</p>
+      ${campoApodo}
+      <label class="campo">Código de sala
+        <input id="codigo" maxlength="4" autocapitalize="characters" autocomplete="off" placeholder="ABCD" value="${esc(codigo)}">
+      </label>
+      <button class="btn grande primario" data-act="unirme">Entrar a la sala</button>
+    </div>`;
+  } else {
+    cuerpo = `<nav class="menu-inicio" aria-label="Menú principal">
+      <button class="opcion-inicio principal" data-act="irInicio" data-p="armar">
+        <span class="ico">🗳️</span><span class="txt"><b>Armar partida</b><small>Creá una sala e invitá a tus amigos</small></span><span class="flecha">›</span>
+      </button>
+      <button class="opcion-inicio" data-act="irInicio" data-p="ingresar">
+        <span class="ico">🔑</span><span class="txt"><b>Ingresar con código</b><small>Sumate a una sala que ya armaron</small></span><span class="flecha">›</span>
+      </button>
+      <a class="opcion-inicio" href="?practica">
+        <span class="ico">🤖</span><span class="txt"><b>Practicar contra bots</b><small>Solo vos, en este celular</small></span><span class="flecha">›</span>
+      </a>
+    </nav>
+    <div class="links"><button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button></div>`;
+  }
   $app.innerHTML = `
     ${portada()}
     <div class="sesion">👤 <span>${esc(yo && (yo.email || yo.displayName) || '')}</span> <button class="btn link" data-act="cerrarSesion">Cerrar sesión</button></div>
-    <label class="campo">Tu apodo
-      <input id="apodo" maxlength="16" autocomplete="nickname" placeholder="Ej: La Tana" value="${esc(guardado.get('name') || (yo && yo.displayName) || '')}">
-    </label>
-    <div class="tarjeta">
-      <h3>Unirme a una sala</h3>
-      <label class="campo">Código de sala
-        <input id="codigo" maxlength="4" autocapitalize="characters" placeholder="ABCD" value="${esc(codigo)}">
-      </label>
-      <button class="btn grande primario" data-act="unirme">Entrar</button>
-    </div>
-    <div class="o">o</div>
-    <button class="btn grande secundario" data-act="crear">Crear sala nueva</button>
-    <div class="links">
-      <button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button>
-      <a class="btn link" href="?practica">🤖 Practicar contra bots</a>
-    </div>
+    ${cuerpo}
   `;
   const codigoInput = document.getElementById('codigo');
-  codigoInput.addEventListener('input', () => {
-    codigoInput.value = codigoInput.value.toUpperCase().replace(/[^A-Z]/g, '');
-  });
+  if (codigoInput) {
+    codigoInput.addEventListener('input', () => {
+      codigoInput.value = codigoInput.value.toUpperCase().replace(/[^A-Z]/g, '');
+    });
+    if (!codigoInput.value) codigoInput.focus();
+  }
 }
 
 function apodo() {
@@ -1415,6 +1448,11 @@ document.addEventListener('click', async (ev) => {
       }, { debate, declare: true, voteTime }, miLookGuardado());
       break;
     }
+    case 'irInicio':
+      st.pantallaInicio = d.p;
+      pantallaInicio();
+      window.scrollTo(0, 0);
+      break;
     case 'crear': {
       if (!configurado) return toast('Primero hay que configurar Firebase.', 'error');
       const name = apodo();
