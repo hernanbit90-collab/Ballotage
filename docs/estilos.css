@@ -1098,3 +1098,127 @@ body {
   .barra .btn.icono { width: 38px; min-height: 38px; }
 }
 .voz .aclara { display: block; opacity: .75; font-size: .6875rem; margin-top: 2px; }
+
+/* ================================================================
+   Rediseño "Noche de escrutinio" (del lienzo de Claude Design):
+   Inter para leer, Space Grotesk para títulos y números, Bowlby solo
+   en el logo. Superficies lisas, bordes finos, botones planos con brillo.
+   ================================================================ */
+:root {
+  --noche: #0d0a22;
+  --noche-2: #16123a;
+  --noche-3: #1f1a4b;
+  --fucsia: #ff3d8b;
+  --turquesa: #22d3b6;
+  --rojo: #ff5a64;
+  --texto-2: #a9a3cc;
+  --borde: rgba(255, 255, 255, .08);
+  --fuente: 'Inter', 'Rubik', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fuente-titulo: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --fuente-logo: 'Bowlby One', 'Arial Black', sans-serif;
+  --r-l: 18px;
+  --r-xl: 22px;
+}
+
+body {
+  background:
+    radial-gradient(100% 50% at 50% -12%, rgba(91, 52, 170, .55), transparent 70%),
+    radial-gradient(60% 40% at 100% 0%, rgba(255, 61, 139, .14), transparent 70%),
+    var(--noche);
+  background-attachment: fixed;
+  letter-spacing: -.005em;
+}
+
+/* Títulos: Space Grotesk; el logo chico sigue con su letra de afiche */
+h1, h2, h3, .pregunta, .resultado, .final .vos {
+  font-family: var(--fuente-titulo);
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+.logo-chico { font-family: var(--fuente-logo); font-weight: 400; letter-spacing: .5px; }
+.mesa-centro b, .m-item.ron b, .codigo-sala strong, #codigo, .reloj-voto b[data-fin] { font-family: var(--fuente-titulo); font-weight: 700; }
+
+/* Superficies */
+.tarjeta, .lista-jugadores li {
+  background: var(--noche-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-l);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, .28);
+}
+.lista-jugadores li { box-shadow: none; background: rgba(255, 255, 255, .04); border-radius: 14px; }
+.barra { background: rgba(22, 18, 58, .82); box-shadow: 0 1px 0 var(--borde); }
+
+/* Campos oscuros, como en el diseño */
+.campo input {
+  background: var(--noche);
+  color: #f4f1ff;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 12px;
+  box-shadow: none;
+}
+.inicio .campo input { box-shadow: none; }
+.campo input::placeholder { color: #6f6996; }
+.campo input:focus { border-color: var(--amarillo); box-shadow: 0 0 0 4px rgba(255, 210, 63, .18); }
+#codigo { color: var(--amarillo); letter-spacing: .45em; font-size: var(--t-2xl); }
+
+/* Botones planos con brillo suave (sin canto 3D) */
+.btn { border-radius: 14px; box-shadow: none; font-weight: 700; letter-spacing: -.005em; }
+.btn:active { transform: scale(.98); box-shadow: none; }
+.btn.grande { min-height: 52px; }
+.btn.primario { background: var(--amarillo); color: var(--noche); box-shadow: 0 10px 26px rgba(255, 210, 63, .28); }
+.btn.primario:active { box-shadow: 0 4px 12px rgba(255, 210, 63, .28); }
+.btn.secundario { background: var(--turquesa); color: #062a24; box-shadow: 0 8px 22px rgba(34, 211, 182, .22); }
+.btn.peligro, .btn.veto { background: var(--rojo); box-shadow: 0 8px 22px rgba(255, 90, 100, .25); }
+.btn.whatsapp { background: #25d366; color: #06311a; box-shadow: none; }
+.btn.fantasma { background: transparent; border: 1px solid rgba(255, 255, 255, .14); }
+@media (hover: hover) { .btn.fantasma:hover { background: rgba(255, 255, 255, .05); } }
+.btn.icono { border-radius: 12px; background: rgba(255, 255, 255, .05); }
+.btn.cant { border-radius: 10px; }
+.btn.cant.elegida { background: var(--amarillo); box-shadow: 0 4px 14px rgba(255, 210, 63, .3); }
+.cantidades, .ajustes .dos { background: var(--noche); border-radius: 14px; }
+.btn.link { color: var(--amarillo); text-decoration: none; font-weight: 600; }
+@media (hover: hover) { .btn.link:hover { text-decoration: underline; } }
+
+/* Panel de acción: tarjeta de papel limpia */
+.accion {
+  background: #fff8e7;
+  border-radius: var(--r-xl);
+  padding: 18px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .35);
+}
+.accion:not(.mi-turno)::after { display: none; }
+.accion.mi-turno { box-shadow: 0 0 0 2px var(--fucsia), 0 14px 40px rgba(255, 61, 139, .3); }
+.accion h2 { font-size: 1.3rem; }
+.opciones .btn { border-radius: 14px; box-shadow: none; border: 1px solid #e6dcc2; }
+@media (hover: hover) { .opciones .btn:hover { border-color: var(--noche); } }
+
+/* Sala de espera: credencial oscura con el código grande */
+.codigo-sala {
+  background: linear-gradient(160deg, #241c5c, var(--noche-2));
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: var(--r-xl);
+  color: #f4f1ff;
+  padding: 18px;
+}
+.codigo-sala span, .codigo-sala small { color: var(--texto-2); }
+.codigo-sala strong { color: var(--amarillo); text-shadow: none; font-size: 2.75rem; letter-spacing: .3em; padding-left: .3em; }
+.titulo-sala small { color: var(--turquesa); }
+
+/* Votación: boletas grandes con borde de color al elegir */
+.boletas { gap: 14px; max-width: 360px; }
+.boleta { border-radius: 20px; border-width: 3px; }
+.boleta.elegida { border-color: var(--turquesa); background: rgba(34, 211, 182, .1); transform: none; }
+.boleta[data-v="no"].elegida, .boleta.no.elegida { border-color: var(--rojo); background: rgba(255, 90, 100, .1); }
+.reloj-voto { border-radius: 999px; border: 0; background: #f1e8d0; font-weight: 600; }
+.reloj-voto.apurate { background: var(--amarillo); }
+
+/* Modales como hojas que suben desde abajo */
+.modal-fondo { background: rgba(8, 6, 22, .78); }
+
+/* Marcador y etapas con los colores nuevos */
+.m-item { border-radius: 12px; }
+.etapas li.hecha span { background: #0b8a78; border-color: #0b8a78; }
+.etapas li.hecha + li::before, .etapas li.hecha + li.ahora::before { background: #0b8a78; }
+
+/* Crónica */
+.cronica { background: var(--noche-2); border: 1px solid var(--borde); border-radius: var(--r-l); }

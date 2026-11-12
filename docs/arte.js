@@ -179,7 +179,7 @@ export const microfono = (candidato) => `<svg class="ico-cargo${candidato ? ' ca
 export const boleta = (si) => `<svg viewBox="0 0 160 120" class="boleta-arte" aria-label="${si ? 'Sí' : 'No'}">
   <rect x="10" y="8" width="140" height="104" rx="6" fill="#fff8e7"/>
   <rect x="10" y="8" width="140" height="20" rx="6" fill="${si ? '#2bb673' : '#e63946'}"/>
-  <text x="80" y="22" text-anchor="middle" font-size="10" font-weight="800" font-family="Rubik, sans-serif" fill="#fff" letter-spacing="2">BOLETA OFICIAL</text>
+  <text x="80" y="22" text-anchor="middle" font-size="10" font-weight="800" font-family="Inter, Rubik, sans-serif" fill="#fff" letter-spacing="2">BOLETA OFICIAL</text>
   <rect x="24" y="44" width="38" height="38" rx="4" fill="#fff" stroke="#1d1a2b" stroke-width="3"/>
   ${si
     ? '<path d="M31 63l8 9 17-22" stroke="#2bb673" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
@@ -270,7 +270,7 @@ export function volante(texto, i, grande) {
     <text x="50" y="30" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="8.5" fill="#1b1446" letter-spacing="1">PROPUESTA</text>
     <path d="M18 36h64" stroke="#1b1446" stroke-width="2"/>
     <text x="50" y="${74 - l.length * 6}" text-anchor="middle" font-family="Permanent Marker, Comic Sans MS, cursive" font-size="${l.length > 3 ? 11.5 : 12.5}" fill="#1b1446">${tspans(l, 50, l.length > 3 ? 13 : 14)}</text>
-    <text x="50" y="116" text-anchor="middle" font-family="Rubik, sans-serif" font-size="5.2" font-weight="800" fill="#1b1446">TITO VENTURA · VAMOS VIENDO</text>
+    <text x="50" y="116" text-anchor="middle" font-family="Inter, Rubik, sans-serif" font-size="5.2" font-weight="800" fill="#1b1446">TITO VENTURA · VAMOS VIENDO</text>
   </svg>`;
 }
 
@@ -364,10 +364,10 @@ export function titularFinal(ganoCampana, como) {
     <rect x="6" y="6" width="308" height="138" fill="#f2efe6" stroke="#1b1446" stroke-width="3"/>
     <text x="160" y="30" text-anchor="middle" font-family="Bowlby One, Arial Black, sans-serif" font-size="20" fill="#1d1a2b">EL BOCHINCHE</text>
     <path d="M16 38h288M16 42h288" stroke="#1d1a2b" stroke-width="1.5"/>
-    <text x="160" y="56" text-anchor="middle" font-family="Rubik, sans-serif" font-size="9" font-weight="800" fill="#e63946" letter-spacing="2">${sup}</text>
+    <text x="160" y="56" text-anchor="middle" font-family="Inter, Rubik, sans-serif" font-size="9" font-weight="800" fill="#e63946" letter-spacing="2">${sup}</text>
     <text x="160" y="86" text-anchor="middle" font-family="Bowlby One, Arial Black, sans-serif" font-size="26" fill="#1d1a2b">${tit[0]}</text>
     <text x="160" y="114" text-anchor="middle" font-family="Bowlby One, Arial Black, sans-serif" font-size="26" fill="#1d1a2b">${tit[1]}</text>
-    <text x="160" y="134" text-anchor="middle" font-family="Rubik, sans-serif" font-size="10" fill="#5e5a7a">${esc(baj)}</text>
+    <text x="160" y="134" text-anchor="middle" font-family="Inter, Rubik, sans-serif" font-size="10" fill="#5e5a7a">${esc(baj)}</text>
   </svg>`;
 }
 
@@ -382,9 +382,9 @@ export function credencialAfiliado(nombre, bando) {
       <circle cx="57" cy="86" r="18" fill="#f3c4a0" stroke="#1b1446" stroke-width="3"/>
       <path d="M30 146c2-22 12-30 27-30s25 8 27 30z" fill="#1b1446"/>
       <text x="57" y="94" text-anchor="middle" font-family="Bowlby One, Arial Black, sans-serif" font-size="20" fill="#1b1446">?</text>
-      <text x="108" y="66" font-family="Rubik, sans-serif" font-size="10" font-weight="800" fill="#8a86a6">NOMBRE</text>
+      <text x="108" y="66" font-family="Inter, Rubik, sans-serif" font-size="10" font-weight="800" fill="#8a86a6">NOMBRE</text>
       <text x="108" y="86" font-family="Bowlby One, Arial Black, sans-serif" font-size="18" fill="#1d1a2b">${esc(String(nombre).slice(0, 14))}</text>
-      <text x="108" y="108" font-family="Rubik, sans-serif" font-size="10" font-weight="800" fill="#8a86a6">BANDO</text>
+      <text x="108" y="108" font-family="Inter, Rubik, sans-serif" font-size="10" font-weight="800" fill="#8a86a6">BANDO</text>
       <g transform="rotate(-8 196 136)">
         <rect x="110" y="114" width="172" height="40" rx="6" fill="none" stroke="${camp ? '#0b8a78' : '#e63946'}" stroke-width="5"/>
         <text x="196" y="142" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="${camp ? 22 : 18}" fill="${camp ? '#0b8a78' : '#e63946'}">${camp ? 'CAMPAÑA' : 'OPERADORES'}</text>
