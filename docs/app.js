@@ -204,10 +204,6 @@ function pantallaPractica() {
       <p class="nota">Si no votás a tiempo, tu boleta cuenta como ¡Sí!</p>
     </div>
     <button class="btn grande primario" data-act="practicar">¡Largar la campaña!</button>
-    <div class="fila-btns">
-      <button class="btn fantasma" data-act="editarPersonaje">🎨 Mi personaje</button>
-      <button class="btn fantasma" data-act="probarMicro">🎙️ Probar micro</button>
-    </div>
     <div class="links">
       <button class="btn link" data-act="reglas">📜 ¿Cómo se juega?</button>
       ${configurado ? `<a class="btn link" href="${location.pathname}">🌐 Jugar online con amigos</a>` : ''}
@@ -351,16 +347,79 @@ function apodo() {
   return n;
 }
 
-// Botoncito de sonido en las pantallas de afuera de la partida.
+// Ruedita de configuración en las pantallas de afuera de la partida.
 function botonSonido() {
   if (st.pub && st.pub.status !== 'lobby') return;
-  if ($app.querySelector('.btn-sonido')) return;
+  if ($app.querySelector('.btn-sonido') || $app.querySelector('.barra [data-m=config]')) return;
   const b = document.createElement('button');
-  b.className = 'btn link btn-sonido';
+  b.className = 'btn ruedita btn-sonido';
   b.dataset.act = 'modal';
-  b.dataset.m = 'sonido';
-  b.textContent = Son.preferencias().musica ? '🔊 Música y sonido' : '🔇 Música y sonido';
+  b.dataset.m = 'config';
+  b.setAttribute('aria-label', 'Configuración');
+  b.innerHTML = '⚙️<span>Configuración</span>';
   $app.appendChild(b);
+}
+
+// ------------------------------------------------------------------ Preferencias de este celular
+
+const FONDOS = [
+  ['noche', 'Noche'],
+  ['escenario', 'Escenario'],
+  ['plaza', 'Plaza'],
+  ['liso', 'Liso'],
+];
+function preferencia(k, porDefecto) { return guardado.get(k) || porDefecto; }
+function aplicarPreferencias() {
+  const r = document.documentElement;
+  r.dataset.fondo = preferencia('fondo', 'noche');
+  r.dataset.letra = preferencia('letra', 'normal');
+  r.dataset.movimiento = preferencia('movimiento', 'si');
+}
+aplicarPreferencias();
+
+function seccionConfig(titulo, cuerpo) {
+  return `<section class="cfg-sec"><h3>${titulo}</h3>${cuerpo}</section>`;
+}
+function selector(clave, opciones, actual) {
+  return `<div class="cantidades cfg-opc" style="grid-template-columns: repeat(${opciones.length}, minmax(0, 1fr))">${opciones.map(([v, t]) =>
+    `<button class="btn cant ${actual === v ? 'elegida' : ''}" data-act="pref" data-k="${clave}" data-v="${v}" aria-pressed="${actual === v}">${t}</button>`).join('')}</div>`;
+}
+
+function modalConfig() {
+  const pr = Son.preferencias();
+  const nom = (st.pub && st.pub.players && st.pub.players[st.pid] && st.pub.players[st.pid].name) || guardado.get('name') || 'Vos';
+  const look = lookDe(st.pid) || miLookGuardado() || A.lookDesdeNombre(nom);
+  const interruptor = (act, k, titulo, ayuda, on) => `<div class="ajuste-sonido">
+      <div><b>${titulo}</b><small>${ayuda}</small></div>
+      <button class="btn chico ${on ? 'primario' : ''}" data-act="${act}" ${k ? `data-k="${k}"` : ''} aria-pressed="${on}">${on ? 'Prendido' : 'Apagado'}</button>
+    </div>`;
+  const micros = st.micros || [];
+  const fondo = preferencia('fondo', 'noche');
+  return `<h2>⚙️ Configuración</h2>
+    ${seccionConfig('🎨 Mi personaje', `<div class="cfg-personaje">
+        <span class="mini-cara">${A.avatar(nom, look)}</span>
+        <div><b>${esc(nom)}</b><small>Así te ven en la mesa. No revela nada de tu rol.</small></div>
+        <button class="btn chico secundario" data-act="editarPersonaje">Editar</button>
+      </div>`)}
+    ${seccionConfig('🎙️ Micrófono', `
+      ${Voz.soportado() ? `<button class="btn grande fantasma" data-act="probarMicro">Probar mi micrófono</button>
+      ${micros.length > 1 ? `<label class="campo">Micrófono a usar
+        <select id="elegir-micro">${[['', 'El del sistema']].concat(micros.map((m) => [m.id, m.nombre])).map(([v, t]) =>
+          `<option value="${esc(v)}" ${Voz.microfonoElegido() === v ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>
+      </label>` : ''}
+      <p class="nota izq">Si juegan en la misma habitación, usen auriculares para que no se acople.</p>`
+    : '<p class="nota izq">⚠️ Este navegador no permite usar el micrófono. Probá con Chrome o Safari actualizados.</p>'}`)}
+    ${seccionConfig('🔊 Música y sonido', `
+      ${interruptor('sonidoToggle', 'musica', '🎵 Música', 'En el inicio, la sala y el final. Nunca durante el debate.', pr.musica)}
+      ${interruptor('sonidoToggle', 'efectos', '✨ Efectos', 'Suspenso al publicar, la urna, tu turno…', pr.efectos)}
+      ${Habla.soportada() ? interruptor('vozBots', '', '🤖 Voz de los bots', 'Leen en voz alta lo que dicen.', Habla.activa()) : ''}
+      <label class="campo">🔈 Volumen <input id="volumen" type="range" min="0" max="1" step="0.05" value="${pr.volumen}"></label>
+      <button class="btn chico" data-act="probarSonido">▶️ Probar sonido</button>`)}
+    ${seccionConfig('🖼️ Fondo', `<div class="fondos">${FONDOS.map(([v, t]) =>
+      `<button class="fondo-opc f-${v} ${fondo === v ? 'elegida' : ''}" data-act="pref" data-k="fondo" data-v="${v}" aria-pressed="${fondo === v}"><span></span>${t}</button>`).join('')}</div>`)}
+    ${seccionConfig('🔠 Tamaño de letra', selector('letra', [['normal', 'Normal'], ['grande', 'Grande']], preferencia('letra', 'normal')))}
+    ${seccionConfig('🎞️ Animaciones', selector('movimiento', [['si', 'Prendidas'], ['no', 'Reducidas']], preferencia('movimiento', 'si')))}
+    <p class="nota">Todo esto se guarda solo en este celular.</p>`;
 }
 
 // ------------------------------------------------------------------ Dibujo general
@@ -409,7 +468,7 @@ function pantallaEspera() {
   const link = location.origin + location.pathname + '?sala=' + st.code + (EMU ? '&emu' : '');
   $app.className = 'espera';
   $app.innerHTML = `
-    <header class="barra">${A.logoChico()}<button class="btn icono" data-act="reglas" aria-label="Reglas">📜</button></header>
+    <header class="barra">${A.logoChico()}<button class="btn icono" data-act="reglas" aria-label="Reglas">📜</button><button class="btn icono" data-act="modal" data-m="config" aria-label="Configuración">⚙️</button></header>
     <div class="codigo-sala">
       <span>Código de sala</span>
       <strong>${st.code}</strong>
@@ -433,7 +492,6 @@ function pantallaEspera() {
         </li>`).join('')}
     </ul>
     ${soyHost && GRATIS && !PRACTICA && n < 10 ? `<button class="btn grande secundario" data-act="agregarBot">🤖 Agregar un bot${n < 5 ? ` <small>(faltan ${5 - n})</small>` : ''}</button>` : ''}
-    <button class="btn fantasma grande" data-act="editarPersonaje">🎨 Armar mi personaje</button>
     ${panelAjustes(p, soyHost)}
     ${n < 5 ? `<p class="nota">Faltan ${5 - n} para arrancar (mínimo 5, máximo 10).</p>` : ''}
     ${soyHost
@@ -463,7 +521,7 @@ function panelAjustes(p, soyHost) {
     ${ajuste('🎧 Audio en el debate', c.voice !== false ? 'Sí' : 'No',
     'Cuando te toca, se prende tu micrófono y todos te escuchan. Si están juntos o en una llamada, apáguenlo.',
     `<div class="dos"><button class="btn cant ${c.voice !== false ? 'elegida' : ''}" data-act="ajuste" data-voice="1">Sí</button><button class="btn cant ${c.voice === false ? 'elegida' : ''}" data-act="ajuste" data-voice="0">No</button></div>`,
-    c.voice !== false ? '<button class="btn chico" data-act="probarMicro">🎙️ Probar mi micrófono</button>' : '')}
+    c.voice !== false ? '<button class="btn chico" data-act="modal" data-m="config">⚙️ Probar mi micrófono</button>' : '')}
     ${ajuste('🗣️ Declaraciones', c.declare ? 'Sí' : 'No',
     'Después de publicar, el Jefe y el Vocero cuentan qué cartas les llegaron. Pueden mentir.',
     `<div class="dos"><button class="btn cant ${c.declare ? 'elegida' : ''}" data-act="ajuste" data-declare="1">Sí</button><button class="btn cant ${!c.declare ? 'elegida' : ''}" data-act="ajuste" data-declare="0">No</button></div>`)}
@@ -528,7 +586,7 @@ function pantallaJuego() {
     <header class="barra">
       ${A.logoChico()}
       <span class="codigo-mini">Sala ${st.code}</span>
-      <button class="btn icono" data-act="modal" data-m="sonido" aria-label="Sonido">${Son.preferencias().musica || Son.preferencias().efectos ? '🔊' : '🔇'}<span class="lbl">Sonido</span></button>
+      <button class="btn icono" data-act="modal" data-m="config" aria-label="Configuración">⚙️<span class="lbl">Ajustes</span></button>
       <button class="btn icono" data-act="modal" data-m="rol" aria-label="Mi rol">🪪<span class="lbl">Mi rol</span></button>
       <button class="btn icono" data-act="modal" data-m="historial" aria-label="Historial">🗂️<span class="lbl">Historial</span></button>
       <button class="btn icono" data-act="modal" data-m="menu" aria-label="Menú">☰<span class="lbl">Menú</span></button>
@@ -1168,6 +1226,8 @@ function contenidoModal() {
   switch (st.modal) {
     case 'personaje':
       return editorPersonaje();
+    case 'config':
+      return modalConfig();
     case 'sonido': {
       const pr = Son.preferencias();
       const interruptor = (k, titulo, ayuda) => `<div class="ajuste-sonido">
@@ -1425,6 +1485,7 @@ document.addEventListener('click', async (ev) => {
     }
     case 'cortarDebate': jugar({ type: 'debateNext', all: true }); break;
     case 'editarPersonaje': {
+      st.volverA = st.modal === 'config' ? 'config' : null;
       const campo = document.getElementById('apodo');
       const nom = (st.pub && st.pub.players && st.pub.players[st.pid] && st.pub.players[st.pid].name)
         || (campo && campo.value.trim()) || guardado.get('name') || 'Vos';
@@ -1450,7 +1511,8 @@ document.addEventListener('click', async (ev) => {
     case 'guardarLook':
       guardado.set('look', JSON.stringify(st.lookEdit));
       if (st.pub && st.pub.players && st.pub.players[st.pid]) jugar({ type: 'look', look: st.lookEdit });
-      st.modal = null;
+      st.modal = st.volverA || null;
+      st.volverA = null;
       dibujarModal();
       toast('¡Listo! Así te van a ver en la mesa.');
       break;
@@ -1460,6 +1522,7 @@ document.addEventListener('click', async (ev) => {
     case 'silenciarVoz': Voz.silenciarAudio(!Voz.estadoActual().silenciado); break;
     case 'escucharVoz': Voz.tocarParaEscuchar(); break;
     case 'probarMicro':
+      st.volverA = st.modal === 'config' ? 'config' : null;
       st.modal = 'micro';
       st.pruebaMicro = 'pidiendo';
       dibujarModal();
@@ -1468,6 +1531,7 @@ document.addEventListener('click', async (ev) => {
           document.querySelectorAll('[data-nivel-prueba]').forEach((el) => el.style.setProperty('--nivel', n.toFixed(2)));
           if (n > 0.12 && st.pruebaMicro !== 'te-escucho') { st.pruebaMicro = 'te-escucho'; dibujarModal(); }
         });
+        Voz.listarMicrofonos().then((l) => { st.micros = l; });
         if (st.pruebaMicro === 'pidiendo') { st.pruebaMicro = 'hablá'; dibujarModal(); }
       } catch {
         st.pruebaMicro = 'error';
@@ -1492,12 +1556,14 @@ document.addEventListener('click', async (ev) => {
       break;
     case 'modal':
       st.modal = d.m;
+      if (d.m === 'config' && Voz.soportado() && !st.micros) Voz.listarMicrofonos().then((l) => { st.micros = l; if (st.modal === 'config' && l.length > 1) dibujarModal(); });
       if (d.m === 'rol') st.verRol = false;
       dibujarModal();
       break;
     case 'cerrarModal':
       if (st.pararPrueba) { st.pararPrueba(); st.pararPrueba = null; }
-      st.modal = null;
+      st.modal = st.volverA && st.modal !== st.volverA ? st.volverA : null;
+      st.volverA = null;
       st.verRol = false;
       dibujarModal();
       break;
@@ -1515,11 +1581,14 @@ document.addEventListener('click', async (ev) => {
       Son.configurar({ [d.k]: !pr[d.k] });
       if (d.k === 'musica' && !pr.musica && (!st.pub || st.pub.status === 'lobby')) Son.musica('inicio');
       dibujarModal();
-      const bs = $app.querySelector('.btn-sonido');
-      if (bs) bs.textContent = Son.preferencias().musica ? '🔊 Música y sonido' : '🔇 Música y sonido';
       break;
     }
     case 'probarSonido': Son.efecto('propuesta'); break;
+    case 'pref':
+      guardado.set(d.k, d.v);
+      aplicarPreferencias();
+      dibujarModal();
+      break;
     case 'toggleRol':
       st.verRol = !st.verRol;
       if (st.verRol) { Son.efecto('sobre'); Son.efecto('misterio'); }
@@ -1595,6 +1664,9 @@ setInterval(() => {
 
 document.addEventListener('input', (ev) => {
   if (ev.target && ev.target.id === 'volumen') Son.configurar({ volumen: Number(ev.target.value) });
+});
+document.addEventListener('change', (ev) => {
+  if (ev.target && ev.target.id === 'elegir-micro') { Voz.elegirMicrofono(ev.target.value); toast('🎙️ Listo, uso ese micrófono.'); }
 });
 
 // ------------------------------------------------------------------ Arranque
