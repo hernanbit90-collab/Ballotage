@@ -1,14 +1,14 @@
 // BALLOTAGE — lo que corre en cada celular.
 // Solo muestra lo que el árbitro le deja ver y le manda pedidos.
 
-import * as CFG from './config.js';
-import * as T from './textos.js';
-import * as A from './arte.js';
-import * as Practica from './practica.js';
-import * as Anfitrion from './anfitrion.js';
-import * as Voz from './voz.js';
-import * as Son from './sonido.js';
-import * as Habla from './habla.js';
+import * as CFG from './config.js?v=202611120233';
+import * as T from './textos.js?v=202611120233';
+import * as A from './arte.js?v=202611120233';
+import * as Practica from './practica.js?v=202611120233';
+import * as Anfitrion from './anfitrion.js?v=202611120233';
+import * as Voz from './voz.js?v=202611120233';
+import * as Son from './sonido.js?v=202611120233';
+import * as Habla from './habla.js?v=202611120233';
 
 const { firebaseConfig, REGION } = CFG;
 
@@ -128,7 +128,31 @@ function salirDeSala(msg) {
   if (msg) toast(msg);
 }
 
+// Al abrir la app con una sala guardada: si la partida está en juego, volvés
+// directo (por si se cortó o recargaste). Si es una sala de espera o una
+// partida terminada, te quedás en el menú con un botón para volver.
+async function revisarSalaGuardada(code) {
+  try {
+    const base = 'rooms/' + code + '/';
+    const pid = (await fb.get(fb.ref(db, base + 'auth/' + st.uid))).val();
+    if (!pid) { guardado.set('code', null); return; }
+    const pub = (await fb.get(fb.ref(db, base + 'pub'))).val() || {};
+    const fase = pub.game && pub.game.phase;
+    // En juego, o sos el anfitrión de una sala de espera (tu celular hace de árbitro): volvés directo.
+    if ((pub.status === 'playing' && fase !== 'ended') || (pub.status === 'lobby' && pub.host === pid)) { entrarASala(code); return; }
+    if (pub.status === 'lobby' || pub.status === 'playing') {
+      st.salaPendiente = { code, estado: pub.status === 'lobby' ? 'Sala de espera' : 'La partida terminó: mirá el resultado o pedí revancha' };
+      if (!st.code && (st.pantallaInicio || 'menu') === 'menu') pantallaInicio();
+      return;
+    }
+    guardado.set('code', null);
+  } catch {
+    guardado.set('code', null); // la sala ya no existe o no se puede leer
+  }
+}
+
 function entrarASala(code) {
+  st.salaPendiente = null;
   st.cancelar.forEach((f) => f());
   st.cancelar = [];
   st.code = code;
@@ -343,7 +367,11 @@ function pantallaInicio() {
       <button class="btn grande primario" data-act="unirme">Entrar a la sala</button>
     </div>`;
   } else {
+    const pend = st.salaPendiente;
     cuerpo = `<nav class="menu-inicio" aria-label="Menú principal">
+      ${pend ? `<button class="opcion-inicio volver-sala" data-act="volverSala">
+        <span class="ico">🔁</span><span class="txt"><b>Volver a tu sala ${esc(pend.code)}</b><small>${esc(pend.estado)}</small></span><span class="flecha">›</span>
+      </button>` : ''}
       <button class="opcion-inicio principal" data-act="irInicio" data-p="armar">
         <span class="ico">🗳️</span><span class="txt"><b>Armar partida</b><small>Creá una sala e invitá a tus amigos</small></span><span class="flecha">›</span>
       </button>
@@ -1448,6 +1476,9 @@ document.addEventListener('click', async (ev) => {
       }, { debate, declare: true, voteTime }, miLookGuardado());
       break;
     }
+    case 'volverSala':
+      if (st.salaPendiente) entrarASala(st.salaPendiente.code);
+      break;
     case 'irInicio':
       st.pantallaInicio = d.p;
       pantallaInicio();
@@ -1729,7 +1760,7 @@ if (PRACTICA) {
     const salaGuardada = guardado.get('code');
     if (salaGuardada && (!salaUrl || salaUrl === salaGuardada)) {
       pantallaInicio();
-      entrarASala(salaGuardada); // si seguís en la sala, entrás directo
+      revisarSalaGuardada(salaGuardada);
     } else {
       pantallaInicio();
     }

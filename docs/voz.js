@@ -12,7 +12,7 @@
 // Cada oyente abre una sesión nueva cada vez que se conecta (si recarga la
 // página, si se cae la conexión o si el orador recarga).
 
-import { ICE_EXTRA } from './config.js';
+import { ICE_EXTRA } from './config.js?v=202611120233';
 
 const SERVIDORES = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }].concat(ICE_EXTRA || []);
 const ESPERA_CONEXION_MS = 12000;
