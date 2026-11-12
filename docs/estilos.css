@@ -1337,3 +1337,5 @@ html[data-movimiento="no"] *, html[data-movimiento="no"] *::before, html[data-mo
   .inicio.paso .logo-arte svg { width: min(180px, 52%); }
   .inicio.paso .bajada { margin-bottom: var(--e2); }
 }
+.opcion-inicio.volver-sala { border-color: rgba(34, 211, 182, .55); background: rgba(34, 211, 182, .1); }
+.opcion-inicio.volver-sala .ico { background: rgba(34, 211, 182, .18); }
