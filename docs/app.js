@@ -1,14 +1,14 @@
 // BALLOTAGE — lo que corre en cada celular.
 // Solo muestra lo que el árbitro le deja ver y le manda pedidos.
 
-import * as CFG from './config.js?v=202611121235';
-import * as T from './textos.js?v=202611121235';
-import * as A from './arte.js?v=202611121235';
-import * as Practica from './practica.js?v=202611121235';
-import * as Anfitrion from './anfitrion.js?v=202611121235';
-import * as Voz from './voz.js?v=202611121235';
-import * as Son from './sonido.js?v=202611121235';
-import * as Habla from './habla.js?v=202611121235';
+import * as CFG from './config.js?v=202611181708';
+import * as T from './textos.js?v=202611181708';
+import * as A from './arte.js?v=202611181708';
+import * as Practica from './practica.js?v=202611181708';
+import * as Anfitrion from './anfitrion.js?v=202611181708';
+import * as Voz from './voz.js?v=202611181708';
+import * as Son from './sonido.js?v=202611181708';
+import * as Habla from './habla.js?v=202611181708';
 
 const { firebaseConfig, REGION } = CFG;
 
@@ -559,7 +559,7 @@ function pantallaEspera() {
       ${pids.map((pid) => `
         <li>
           <span class="punto ${st.presence[pid] ? 'on' : ''}"></span>
-          <span class="mini-cara">${A.avatar(p.players[pid].name, p.players[pid].look)}</span>
+          <span class="mini-cara">${A.avatarDe(p.players[pid])}</span>
           <span class="nombre">${esc(p.players[pid].name)}${pid === st.pid ? ' <em>(vos)</em>' : ''}${p.players[pid].bot ? ' <span class="chapa bot">🤖 bot</span>' : ''}</span>
           ${pid === p.host ? '<span class="chapa">anfitrión</span>' : ''}
           ${soyHost && pid !== st.pid && !PRACTICA ? `<button class="btn chico peligro sacar" data-act="echar" data-pid="${pid}" aria-label="Sacar a ${esc(p.players[pid].name)}" title="Sacar">✕</button>` : ''}
@@ -763,7 +763,7 @@ function filaJugadores(g) {
     const rev = g.reveal ? `<span class="rol-final ${g.reveal[pid]}">${esc(T.ROLES[g.reveal[pid]].titulo)}</span>` : '';
     return `<div class="${cls}" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%">
       ${pid === st.pid ? '<span class="vos">VOS</span>' : ''}
-      <div class="cara">${A.avatar(nombre(pid), lookDe(pid))}${pid === habla ? '<span class="marca habla" title="Está hablando">🎙️</span>' : ''}${!g.alive[pid] ? '<span class="sello-out">OUT</span>' : ''}</div>
+      <div class="cara">${A.avatarDe(st.pub.players[pid], nombre(pid))}${pid === habla ? '<span class="marca habla" title="Está hablando">🎙️</span>' : ''}${!g.alive[pid] ? '<span class="sello-out">OUT</span>' : ''}</div>
       <div class="nom">${esbotMarca(pid)}${esc(nombre(pid))}</div>
       ${cartel}${estado}${rev}
     </div>`;
@@ -1270,7 +1270,7 @@ const FILAS_LOOK = [
   ['colorPelo', 'Color de pelo', 'color'],
   ['lentes', 'Anteojos', 'cara'],
   ['cara', 'Bigote o barba', 'cara'],
-  ['gorro', 'Gorro', 'cara'],
+  ['gorro', 'Gorro o estilo', 'cara'],
   ['ropa', 'Ropa', 'color'],
   ['fondo', 'Fondo', 'color'],
 ];
@@ -1292,7 +1292,7 @@ function editorPersonaje() {
     </div>`).join('');
   return `<h2>🎨 Tu personaje</h2>
     <div class="vista-personaje">${A.avatar(nom, L)}<b>${esc(nom)}</b></div>
-    <p class="nota">Es solo tu cara en la mesa: no tiene nada que ver con el rol que te toque.</p>
+    <p class="nota">Es solo tu cara en la mesa: no tiene nada que ver con el rol que te toque. Los estilos <b>Militante</b> y <b>Libertario</b> son solo de adorno: los dos bandos de la grieta pueden ser de la Campaña o del Rival.</p>
     <button class="btn chico secundario azar" data-act="lookAzar">🎲 Al azar</button>
     ${filas}
     <button class="btn grande primario" data-act="guardarLook">Listo, guardar</button>`;

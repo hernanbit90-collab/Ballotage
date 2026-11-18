@@ -1,8 +1,8 @@
 // Modo práctica: vos contra bots, todo dentro del navegador.
 // Usa el mismo reglamento que el árbitro (motor.js) y el cerebro de bots.js.
 
-import './motor.js?v=202611121235';
-import * as Bots from './bots.js?v=202611121235';
+import './motor.js?v=202611181708';
+import * as Bots from './bots.js?v=202611181708';
 
 const E = globalThis.BallotageEngine;
 const rnd = (n) => Math.floor(Math.random() * n);
@@ -25,6 +25,7 @@ export function iniciar(nombre, n, onCambio, ajustes, look) {
     .slice(0, n - 1)
     .forEach((b, i) => {
       const pid = E.unirse(S, 'bot' + i, b, null, ahora + i + 1);
+      S.pub.players[pid].estilo = Bots.estiloDe(b);
       S.pub.players[pid].bot = true;
     });
   if (ajustes) E.aplicar(S, YO, Object.assign({ type: 'settings' }, ajustes), rnd);

@@ -21,6 +21,14 @@ export const PROPUESTAS = [
   'Plaza nueva con calesita incluida',
   'Debate obligatorio y sin chicanas',
   'Ventanilla que atiende al mediodía',
+  'Motosierra solo para el pasto',
+  'Estado presente pero que atienda',
+  'Bombo con volumen regulable',
+  'Superávit para el asado',
+  'Libertad para elegir el feriado',
+  'Boleto de colectivo con descuento',
+  'Mate cocido y medialuna sin casta',
+  'Clases de debate sin gritos',
 ];
 
 export const ESCANDALOS = [
@@ -44,6 +52,14 @@ export const ESCANDALOS = [
   'No sabía el precio del pan',
   'Foto en un yate que no es suyo',
   'Pasó de bando en mitad de la sesión',
+  'Ñoqui con vincha y con campera',
+  'Premio al panqueque del año',
+  'Cadena nacional en pleno partido',
+  'Se filtró el grupo de WhatsApp',
+  'Bombos a las 3 de la mañana',
+  'La casta cobró dos veces',
+  'Encuesta pagada con un asado',
+  'Cuentas que no cierran',
 ];
 
 export const ROLES = {
@@ -108,6 +124,9 @@ export const REGLAS = `
   <li><b>Campaña</b>: 5 Propuestas publicadas, o hacerle un Carpetazo al Topo.</li>
   <li><b>Operadores</b>: 6 Escándalos publicados, o que El Topo sea elegido Vocero después del 3.er Escándalo (la <b>zona roja</b>).</li>
 </ul>
+
+<h2>La grieta, de adorno</h2>
+<p>Los personajes pueden venir con estilo <b>Militante</b> (pañuelo celeste y blanco) o <b>Libertario</b> (campera negra y pin de león). Los bots hablan con la jerga de cada uno: Estado presente, casta, ñoqui, panqueque, motosierra, bombo… Es humor para los dos lados: el estilo no cambia tu bando ni tus chances.</p>
 
 <h2>Poderes</h2>
 <p>Algunos Escándalos le dan un poder al Jefe de Campaña, que <b>está obligado</b> a usarlo:</p>
