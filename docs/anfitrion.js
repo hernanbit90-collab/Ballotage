@@ -6,8 +6,8 @@
 // "buzón" y les contesta. Los otros jugadores siguen viendo solo lo suyo.
 // Mientras el anfitrión tenga el juego cerrado, la partida queda en pausa.
 
-import './motor.js?v=202611121235';
-import * as Bots from './bots.js?v=202611121235';
+import './motor.js?v=202611181708';
+import * as Bots from './bots.js?v=202611181708';
 
 const E = globalThis.BallotageEngine;
 const LETRAS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // sin I ni O para no confundir
@@ -149,6 +149,7 @@ function procesar(code, pedido) {
         if (!libre) throw new E.ErrorJuego('No quedan nombres de bots.');
         const pid = E.unirse(T, 'bot-' + Math.random().toString(36).slice(2, 10), libre, null, t);
         T.pub.players[pid].bot = true;
+        T.pub.players[pid].estilo = Bots.estiloDe(libre);
         await fb.set(ref('rooms/' + code + '/presence/' + pid), true).catch(() => {});
         r = { ok: true, pid };
       } else if (pedido.op === 'botSay') {

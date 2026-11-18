@@ -58,7 +58,7 @@ export const LOOK = {
   colorPelo: ['#1d1a2b', '#4a2f1b', '#8a5a2b', '#d9b44a', '#b03a2e', '#9a9aa8', '#f2efe6'],
   lentes: ['Sin anteojos', 'Con anteojos'],
   cara: ['Nada', 'Bigote', 'Barba'],
-  gorro: ['Nada', 'Gorra', 'Boina', 'Vincha'],
+  gorro: ['Nada', 'Gorra', 'Boina', 'Vincha', 'Pañuelo militante', 'Campera libertaria'],
   ropa: ['#ff2e88', '#ff7a1a', '#ffd23f', '#1ec8b0', '#4cc9f0', '#9b5de5', '#2a2166', '#f2efe6'],
   fondo: ['#ff2e88', '#ff7a1a', '#ffd23f', '#1ec8b0', '#4cc9f0', '#9b5de5', '#e63946', '#8a86a6'],
 };
@@ -88,6 +88,15 @@ function lookValido(look) {
   if (!look || typeof look !== 'object') return null;
   for (const k of Object.keys(LOOK)) if (!Number.isInteger(look[k]) || look[k] < 0 || look[k] >= LOOK[k].length) return null;
   return look;
+}
+
+// Jugador con su estilo (los bots traen "militante" o "libertario" y sin elegir
+// nada usan el accesorio de su estilo). Los humanos eligen en Configuración.
+export function avatarDe(j, nombre) {
+  const n = (j && j.name) || nombre || '';
+  let L = lookValido(j && j.look) || lookDesdeNombre(n);
+  if (j && !j.look && j.estilo) L = Object.assign({}, L, { gorro: j.estilo === 'militante' ? 4 : 5, lentes: 0 });
+  return avatar(n, L);
 }
 
 // Carita del jugador. Siempre con la misma expresión tranquila: no da pistas del rol.
@@ -126,6 +135,10 @@ export function avatar(nombre, look) {
     `<path d="M17 25c0-9 7-14 15-14s15 5 15 14z" fill="${ropa}" stroke="${linea}" stroke-width="1.5"/><path d="M30 24h22c0 3-3 4-6 4H30z" fill="${ropa}" stroke="${linea}" stroke-width="1.5"/><circle cx="32" cy="12" r="1.8" fill="${linea}"/>`,
     `<path d="M15 23c2-8 10-12 18-11 9 1 15 5 16 10-6 3-27 4-34 1z" fill="${linea}"/><circle cx="34" cy="11" r="1.6" fill="${linea}"/>`,
     `<path d="M17 22c4-4 26-4 30 0v4c-4-3-26-3-30 0z" fill="${ropa}" stroke="${linea}" stroke-width="1.2"/>`,
+    // Pañuelo militante: celeste y blanco al cuello, con vincha
+    `<path d="M20 49l12 13 12-13c-5 3-19 3-24 0z" fill="#8fd3f4" stroke="${linea}" stroke-width="1.2"/><path d="M23 51l9 9 9-9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/><path d="M17 22c4-4 26-4 30 0v3.5c-4-3-26-3-30 0z" fill="#8fd3f4" stroke="${linea}" stroke-width="1.2"/><path d="M17 23.5c4-3 26-3 30 0" stroke="#fff" stroke-width="1.4" fill="none"/>`,
+    // Campera libertaria: solapas negras y pin de león
+    `<path d="M8 64c2-11 10-16 20-16l4 9-6 7z" fill="#1d1a2b"/><path d="M56 64c-2-11-10-16-20-16l-4 9 6 7z" fill="#1d1a2b"/><circle cx="44" cy="57" r="4.4" fill="#ffd23f" stroke="${linea}" stroke-width="1"/><path d="M41.6 55.6l1.4 1.6M46.4 55.6L45 57.2M42.2 59.4h3.6" stroke="${linea}" stroke-width="1" stroke-linecap="round"/>`,
   ];
   const lentes = L.lentes
     ? `<g fill="rgba(255,255,255,.25)" stroke="${linea}" stroke-width="1.6"><circle cx="26" cy="31" r="4.6"/><circle cx="38" cy="31" r="4.6"/></g><path d="M30.6 31h2.8" stroke="${linea}" stroke-width="1.6"/>`

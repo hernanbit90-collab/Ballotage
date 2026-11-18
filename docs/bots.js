@@ -11,7 +11,7 @@
 //   d = { decir: { pid, text }, demora } -> el bot habla en el debate
 //   d = null                          -> le toca a un humano
 
-import './motor.js?v=202611121235';
+import './motor.js?v=202611181708';
 
 const E = globalThis.BallotageEngine;
 const L = (x) => E.lista(x);
@@ -19,6 +19,9 @@ const rnd = (n) => Math.floor(Math.random() * n);
 const azar = (arr) => arr[rnd(arr.length)];
 const chance = (p) => Math.random() < p;
 
+// Estilo de cada bot (de adorno y de tono): la mitad militante y la mitad libertario,
+// intercalados para que en cualquier mesa haya de los dos lados de la grieta.
+export const estiloDe = (nombre) => (NOMBRES_BOTS.indexOf(nombre) % 2 === 0 ? 'militante' : 'libertario');
 export const NOMBRES_BOTS = ['Cacho', 'Pocha', 'Rulo', 'Mirta', 'Beto', 'Chiche', 'Nené', 'Coco', 'Lali', 'Tota', 'Pirucha', 'Toto'];
 
 export function crearMemoria() {
@@ -309,6 +312,34 @@ const DE_CAMPANA = [
   'El spot nuevo está bárbaro: dura treinta segundos, no cuatro horas.',
   'Fuentes cercanas a esta mesa dicen que vamos bien.',
 ];
+// Frases de cada estilo. Los dos se burlan por igual (y de sí mismos).
+const DE_MILITANTE = [
+  'Compañeros, esto se arregla con más Estado presente y menos excusas.',
+  'Armamos la unidad básica, ponemos el bombo y salimos a convencer casa por casa.',
+  'Nadie se salva solo, compañeros: la patria es el otro.',
+  'Yo vengo de la militancia de base: pegatina, choripán y asamblea.',
+  'Hay que volver a los barrios. Todo el año es carnaval, pero hoy hay que ordenar la mesa.',
+  'Ojo con el que se da vuelta como panqueque: acá se la juega hasta el final.',
+  'Con la gente adentro y el bombo afuera, esto sale. Ni un paso atrás.',
+  'Menos encuestas truchas y más territorio, compañeros.',
+];
+const DE_LIBERTARIO = [
+  'La casta tiene miedo. Y acá la casta son los que no quieren votar bien.',
+  'No hay plata. Si publicamos más Escándalos, tampoco hay campaña.',
+  'Menos impuestos, menos burocracia y más libertad. ¡Viva la libertad, carajo!',
+  'La motosierra… para el pasto del búnker, claro. Que alguien corte el yuyo.',
+  'Al ñoqui se lo reconoce porque cobra sin venir. Yo vine temprano y me quedo.',
+  'Cada vez que alguien dice "Estado presente", mi billetera se pone nerviosa.',
+  'Dato mata relato: miren los números del historial.',
+  'Los de siempre nos trajeron hasta acá. Esta mesa necesita aire fresco.',
+];
+// Para los dos lados: se acusan con las palabras de la grieta.
+const DE_GRIETA = [
+  'Basta de grieta: lo que importa es quién es el Topo, no quién te cae mal.',
+  'Gorila, casta, ñoqui… dejemos las etiquetas y miremos los votos.',
+  'Acá no hay unidad ni libertad que valga si hay un Topo en la mesa.',
+  'Que no nos dividan: el rival se frota las manos con tanta grieta.',
+];
 const DE_ESCANDALO = [
   'Otra tapa con escándalo y nos bajan del escenario.',
   'Esto ya huele a operación de Los de Enfrente.',
@@ -372,6 +403,9 @@ function reaccion(S, p) {
 function comentario(S, p) {
   const g = S.pub.game;
   const op = esOp(S, p);
+  const estilo = S.pub.players[p] && S.pub.players[p].estilo;
+  if (estilo && chance(0.35)) return azar(estilo === 'militante' ? DE_MILITANTE : DE_LIBERTARIO);
+  if (chance(0.12)) return azar(DE_GRIETA);
   if (g.scandals >= 3 && chance(0.4)) return azar(DE_ZONA_ROJA);
   if (op && chance(0.45)) return azar(DE_DISIMULO);
   if (g.scandals > g.proposals && chance(0.5)) return azar(DE_ESCANDALO);
@@ -414,7 +448,7 @@ function frase(S, mem, p) {
     else if (m.includes('mintio')) partes.push(`Las declaraciones de ${N(blanco)} no cierran por ningún lado.`);
     else if (veces >= 2) partes.push(`Ojo con ${N(blanco)}: estuvo en ${veces} gobiernos que publicaron Escándalos.`);
     else if (veces === 1) partes.push(`A ${N(blanco)} le vengo siguiendo los pasos desde el último Escándalo.`);
-    else if (op) partes.push(azar([`${N(blanco)} habla poco y vota raro. Sospechoso.`, `${N(blanco)} vota raro, revisen el historial.`, `${N(blanco)} rosquea por lo bajo, yo lo vi.`]));
+    else if (op) partes.push(azar([`${N(blanco)} habla poco y vota raro. Sospechoso.`, `${N(blanco)} vota raro, revisen el historial.`, `${N(blanco)} rosquea por lo bajo, yo lo vi.`, `${N(blanco)} es un panqueque: hoy vota una cosa y mañana otra.`, `${N(blanco)} cobra sin trabajar: es un ñoqui de la campaña.`]));
     if (partes.length > antes) {
       const c = azar(CHICANA);
       const t = partes[partes.length - 1];

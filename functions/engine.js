@@ -205,7 +205,7 @@ function config(S) {
 }
 
 // Personaje de cada jugador (solo aspecto: no dice nada del rol).
-const LOOK_OPCIONES = { piel: 6, pelo: 8, colorPelo: 7, lentes: 2, cara: 3, gorro: 4, ropa: 8, fondo: 8 };
+const LOOK_OPCIONES = { piel: 6, pelo: 8, colorPelo: 7, lentes: 2, cara: 3, gorro: 6, ropa: 8, fondo: 8 };
 
 function personaje(S, pid, look) {
   exigir(look && typeof look === 'object', 'Personaje inválido.');
